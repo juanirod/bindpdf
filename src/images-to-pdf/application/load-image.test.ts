@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import type { ImageCodec, RawImage } from "./ports";
 import { loadImage, UnsupportedImageError } from "./load-image";
@@ -31,6 +32,31 @@ describe("loadImage", () => {
     expect(image).toMatchObject({ name: "a.jpg", format: "jpg", bytes: JPEG, takenAt: 42 });
     expect(image.id).toEqual(expect.any(String));
     expect(calls).toEqual([]);
+  });
+
+  it("turns rotated JPEGs upright through the codec, keeping their EXIF date", async () => {
+    const calls: string[] = [];
+    const rotated = new Uint8Array(
+      await sharp({ create: { width: 4, height: 2, channels: 3, background: "#c84" } })
+        .jpeg()
+        .withExif({ IFD2: { DateTimeOriginal: "2024:03:15 14:30:05" } })
+        .withMetadata({ orientation: 6 })
+        .toBuffer(),
+    );
+    const image = await loadImage({ name: "r.jpg", bytes: rotated, lastModified: 0 }, fakeCodec(calls));
+    expect(image).toMatchObject({ format: "jpg", bytes: ENCODED, takenAt: new Date(2024, 2, 15, 14, 30, 5).getTime() });
+    expect(calls).toEqual(["decode image/jpeg", "encode jpg true"]);
+  });
+
+  it("rejects a rotated JPEG the codec can't open with UnsupportedImageError", async () => {
+    const rotated = new Uint8Array(
+      await sharp({ create: { width: 4, height: 2, channels: 3, background: "#c84" } })
+        .jpeg()
+        .withMetadata({ orientation: 6 })
+        .toBuffer(),
+    );
+    const loading = loadImage({ name: "r.jpg", bytes: rotated, lastModified: 0 }, brokenCodec);
+    await expect(loading).rejects.toMatchObject({ name: "UnsupportedImageError", fileName: "r.jpg" });
   });
 
   it("keeps PNG bytes as they are, dated by the file", async () => {

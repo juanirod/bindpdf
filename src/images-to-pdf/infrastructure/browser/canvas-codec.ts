@@ -14,7 +14,8 @@ const canvasOf = (width: number, height: number) => {
 /** Decodes with the browser's own image support and encodes through a canvas. */
 export const canvasCodec: ImageCodec = {
   decode: async (bytes, type) => {
-    const bitmap = await createImageBitmap(new Blob([bytes], type ? { type } : {}));
+    // Explicit, since older browsers ignored the EXIF orientation by default.
+    const bitmap = await createImageBitmap(new Blob([bytes], type ? { type } : {}), { imageOrientation: "from-image" });
     const { context } = canvasOf(bitmap.width, bitmap.height);
     context.drawImage(bitmap, 0, 0);
     bitmap.close();
