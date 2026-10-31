@@ -91,6 +91,31 @@ describe("runCli bind", () => {
     }
   });
 
+  it("shrinks pages to --max-size", async () => {
+    const { deps, pageWidths } = setup();
+    expect(await runCli(["c.webp", "a.png", "--max-size", "100"], deps)).toBe(0);
+    expect(await pageWidths()).toEqual([30, 10]);
+
+    const big = await sharp({ create: { width: 300, height: 150, channels: 3, background: "#c84" } }).jpeg().toBuffer();
+    files.set("big.jpg", { name: "big.jpg", bytes: new Uint8Array(big), lastModified: 0 });
+    const resized = setup();
+    expect(await runCli(["big.jpg", "--max-size", "100"], resized.deps)).toBe(0);
+    const [page] = (await PDFDocument.load(resized.written.get("images.pdf")!)).getPages();
+    expect(page.getSize()).toEqual({ width: 100, height: 50 });
+  });
+
+  it("re-encodes JPEGs at --quality", async () => {
+    const noisy = await sharp({ create: { width: 64, height: 64, channels: 3, background: "#808080", noise: { type: "gaussian", mean: 128, sigma: 60 } } })
+      .jpeg({ quality: 100 })
+      .toBuffer();
+    files.set("noisy.jpg", { name: "noisy.jpg", bytes: new Uint8Array(noisy), lastModified: 0 });
+    const original = setup();
+    const low = setup();
+    expect(await runCli(["noisy.jpg"], original.deps)).toBe(0);
+    expect(await runCli(["noisy.jpg", "--quality", "20"], low.deps)).toBe(0);
+    expect(low.written.get("images.pdf")!.length).toBeLessThan(original.written.get("images.pdf")!.length);
+  });
+
   it("sorts by date with --sort date", async () => {
     const { deps, pageWidths } = setup();
     expect(await runCli(["a.png", "b.jpg", "c.webp", "--sort", "date"], deps)).toBe(0);

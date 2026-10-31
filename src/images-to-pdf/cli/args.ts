@@ -18,6 +18,10 @@ export interface BindOptions {
   readonly savePreset?: string;
   readonly output: string;
   readonly pageSize: PageSize;
+  /** JPEG quality, 1 to 100, for re-encoded pages. */
+  readonly quality?: number;
+  /** Longest side, in pixels, that pages are shrunk to. */
+  readonly maxSize?: number;
   readonly interactive: boolean;
 }
 
@@ -53,6 +57,8 @@ Adjustments (applied to every page):
 Output:
   -o, --output <file>        PDF to write (default: images.pdf)
       --page-size <size>     image (default), a4 or letter
+      --max-size <px>        Shrink images whose longest side is larger (100 to 20000)
+      --quality <n>          JPEG quality from 1 to 100 (default 92); re-encodes every JPEG
 
 Other:
   -i, --interactive          Choose order, adjustments and output step by step
@@ -64,6 +70,7 @@ Other:
 Examples:
   bindpdf *.jpg --sort date --preset scanned-black-white -o book.pdf
   bindpdf cover.png page-*.jpg --brightness 110 --contrast 130
+  bindpdf *.jpg --max-size 1600 --quality 75 -o smaller.pdf
   bindpdf -i *.jpg
 `;
 
@@ -75,15 +82,19 @@ const oneOf = <T extends string>(value: string, allowed: readonly T[], label: st
   throw new UsageError(`Unknown ${label} "${value}". Use: ${allowed.join(", ")}.`);
 };
 
-const adjustment = (key: keyof Adjustments, raw: string | undefined) => {
-  if (raw === undefined) return {};
-  const [min, max] = ADJUSTMENT_RANGES[key];
+const wholeNumber = (flag: string, raw: string, [min, max]: readonly [number, number]) => {
   const value = Number(raw);
   if (!/^\d+$/.test(raw.trim()) || value < min || value > max) {
-    throw new UsageError(`--${key} must be a whole number from ${min} to ${max}.`);
+    throw new UsageError(`--${flag} must be a whole number from ${min} to ${max}.`);
   }
-  return { [key]: value };
+  return value;
 };
+
+const QUALITY_RANGE = [1, 100] as const;
+const MAX_SIZE_RANGE = [100, 20000] as const;
+
+const adjustment = (key: keyof Adjustments, raw: string | undefined) =>
+  raw === undefined ? {} : { [key]: wholeNumber(key, raw, ADJUSTMENT_RANGES[key]) };
 
 const manualOrder = (raw: string, count: number): Order => {
   const positions = raw.split(",").map((part) => Number(part.trim()) - 1);
@@ -115,6 +126,8 @@ const parse = (argv: readonly string[]) => {
         "save-preset": { type: "string" },
         output: { type: "string", short: "o", default: "images.pdf" },
         "page-size": { type: "string", default: "image" },
+        "max-size": { type: "string" },
+        quality: { type: "string" },
         interactive: { type: "boolean", short: "i", default: false },
         "list-presets": { type: "boolean", default: false },
         "delete-preset": { type: "string" },
@@ -162,6 +175,10 @@ export const parseCliArgs = (argv: readonly string[]): CliCommand => {
       ...(values["save-preset"] !== undefined && { savePreset: values["save-preset"] }),
       output: withPdfExtension(values.output),
       pageSize: oneOf(values["page-size"], PAGE_SIZES, "page size"),
+      ...(values.quality !== undefined && { quality: wholeNumber("quality", values.quality, QUALITY_RANGE) }),
+      ...(values["max-size"] !== undefined && {
+        maxSize: wholeNumber("max-size", values["max-size"], MAX_SIZE_RANGE),
+      }),
       interactive: values.interactive,
     },
   };

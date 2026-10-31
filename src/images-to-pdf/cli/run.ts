@@ -118,7 +118,7 @@ const bind = async (options: BindOptions, deps: CliDeps) => {
   await eachInOrder(
     session.batch,
     PARALLEL_PAGES,
-    (image) => adjustImage(image, adjustments, deps.codec),
+    (image) => adjustImage(image, adjustments, deps.codec, { maxSize: options.maxSize, quality: options.quality }),
     async (page, index) => {
       deps.progress?.show(`Adjusting page ${index + 1}/${pages}…`);
       await builder.addPage(page);
