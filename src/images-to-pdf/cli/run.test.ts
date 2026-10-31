@@ -177,6 +177,39 @@ describe("runCli bind", () => {
     expect(written.size).toBe(0);
   });
 
+  it("reports progress while reading, adjusting and writing, and clears it around prompts", async () => {
+    const events: string[] = [];
+    const progress = { show: (message: string) => events.push(message), clear: () => events.push("<clear>") };
+    const { deps, out } = setup({
+      progress,
+      interact: async (session) => {
+        events.push("<interact>");
+        return session;
+      },
+    });
+    expect(await runCli(["a.png", "b.jpg", "-i", "-o", "book.pdf"], deps)).toBe(0);
+    expect(events).toEqual([
+      "Reading images 1/2…",
+      "Reading images 2/2…",
+      "<clear>",
+      "<interact>",
+      "Adjusting page 1/2…",
+      "Adjusting page 2/2…",
+      "Building the PDF…",
+      "Writing book.pdf…",
+      "<clear>",
+    ]);
+    expect(out).toEqual(["Wrote book.pdf (2 pages)."]);
+  });
+
+  it("clears the progress line when a run fails", async () => {
+    const events: string[] = [];
+    const progress = { show: (message: string) => events.push(message), clear: () => events.push("<clear>") };
+    const { deps } = setup({ progress, writeFile: () => Promise.reject(new Error("disk full")) });
+    expect(await runCli(["a.png"], deps)).toBe(1);
+    expect(events.at(-1)).toBe("<clear>");
+  });
+
   it("refuses interactive mode without a terminal", async () => {
     const { deps, err, written } = setup();
     expect(await runCli(["a.png", "-i"], deps)).toBe(1);

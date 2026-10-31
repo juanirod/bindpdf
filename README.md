@@ -71,6 +71,8 @@ Without `--sort` or `--order`, pages follow the order you list the images in.
 
 Saved presets live in `~/.config/bindpdf/presets.json` (or `$XDG_CONFIG_HOME/bindpdf/`). They are separate from the presets saved in the browser.
 
+While it reads, adjusts and writes, a status line on stderr shows how far along it is (only in a terminal, so piped output stays clean).
+
 Exit codes: `0` done, `1` failed, `2` wrong usage, `130` cancelled.
 
 ## How the code is organized

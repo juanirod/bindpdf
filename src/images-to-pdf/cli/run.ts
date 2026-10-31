@@ -7,6 +7,7 @@ import { sortByDate, type BatchImage } from "../domain/batch";
 import { BUILT_IN_PRESETS, deletePreset, InvalidPresetNameError, savePreset, type Preset } from "../domain/presets";
 import { HELP, parseCliArgs, UsageError, type BindOptions, type Order } from "./args";
 import { describeAdjustments, findPreset, isBuiltIn, presetSlug } from "./presets";
+import type { Progress } from "./progress";
 
 /** What interactive mode can change before the PDF is built. */
 export interface Session {
@@ -24,6 +25,8 @@ export interface CliDeps {
   out(line: string): void;
   err(line: string): void;
   readonly version: string;
+  /** Status line for slow steps; absent when output isn't a terminal. */
+  readonly progress?: Progress;
   /** Interactive mode; absent when the terminal can't run it. */
   interact?(session: Session, presets: PresetStore): Promise<Session>;
 }
@@ -73,7 +76,8 @@ const loadBatch = async (files: readonly string[], deps: CliDeps): Promise<Batch
   for (const file of files) sources.push(await readSource(file, deps));
 
   const batch: BatchImage[] = [];
-  for (const source of sources) {
+  for (const [index, source] of sources.entries()) {
+    deps.progress?.show(`Reading images ${index + 1}/${sources.length}…`);
     try {
       batch.push(await loadImage(source, deps.codec));
     } catch (error) {
@@ -98,15 +102,22 @@ const bind = async (options: BindOptions, deps: CliDeps) => {
     output: options.output,
   };
   if (options.interactive) {
+    deps.progress?.clear();
     if (!deps.interact) throw new CliError("Interactive mode needs a terminal.");
     session = await deps.interact(session, deps.presets);
     adjustments = session.adjustments;
   }
 
   const adjusted: BatchImage[] = [];
-  for (const image of session.batch) adjusted.push(await adjustImage(image, adjustments, deps.codec));
+  for (const [index, image] of session.batch.entries()) {
+    deps.progress?.show(`Adjusting page ${index + 1}/${session.batch.length}…`);
+    adjusted.push(await adjustImage(image, adjustments, deps.codec));
+  }
+  deps.progress?.show("Building the PDF…");
   const pdf = await buildPdf(adjusted, { pageSize: session.pageSize });
+  deps.progress?.show(`Writing ${session.output}…`);
   await deps.writeFile(session.output, pdf);
+  deps.progress?.clear();
   const pages = adjusted.length;
   deps.out(`Wrote ${session.output} (${pages} ${pages === 1 ? "page" : "pages"}).`);
 
@@ -161,6 +172,7 @@ export const runCli = async (argv: readonly string[], deps: CliDeps): Promise<nu
     if (command.kind === "bind") await bind(command.options, deps);
     return 0;
   } catch (error) {
+    deps.progress?.clear();
     if (error instanceof CancelledError) {
       deps.err(error.message);
       return 130;
