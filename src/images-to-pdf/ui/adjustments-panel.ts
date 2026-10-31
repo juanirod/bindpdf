@@ -1,4 +1,4 @@
-import { NEUTRAL, type Adjustments } from "../domain/adjustments";
+import { NEUTRAL, sameAdjustments, type Adjustments } from "../domain/adjustments";
 import {
   BUILT_IN_PRESETS,
   deletePreset,
@@ -6,13 +6,10 @@ import {
   savePreset,
   type Preset,
 } from "../domain/presets";
-import { loadPresets, storePresets } from "../infrastructure/preset-store";
+import { localPresetStore } from "../infrastructure/browser/local-preset-store";
 
 const SLIDERS = ["brightness", "contrast", "saturation"] as const;
 const CUSTOM = "";
-
-const sameAdjustments = (a: Adjustments, b: Adjustments) =>
-  SLIDERS.every((key) => a[key] === b[key]);
 
 /** Wires the "Adjust images" panel. Calls onChange with the adjustments every time they change. */
 export const mountAdjustmentsPanel = (
@@ -29,7 +26,7 @@ export const mountAdjustmentsPanel = (
     SLIDERS.map((key) => [key, $<HTMLInputElement>(key)]),
   ) as Record<(typeof SLIDERS)[number], HTMLInputElement>;
 
-  let userPresets = loadPresets();
+  let userPresets = localPresetStore.load();
   let adjustments: Adjustments = NEUTRAL;
 
   const allPresets = (): Preset[] => [...BUILT_IN_PRESETS, ...userPresets];
@@ -97,7 +94,7 @@ export const mountAdjustmentsPanel = (
       showError(error.message);
       return;
     }
-    storePresets(userPresets);
+    localPresetStore.store(userPresets);
     showError(null);
     presetName.value = "";
     renderPresetOptions();
@@ -106,7 +103,7 @@ export const mountAdjustmentsPanel = (
 
   deletePresetButton.addEventListener("click", () => {
     userPresets = deletePreset(userPresets, presetSelect.value);
-    storePresets(userPresets);
+    localPresetStore.store(userPresets);
     renderPresetOptions();
     render();
   });

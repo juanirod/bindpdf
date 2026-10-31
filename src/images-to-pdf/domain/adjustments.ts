@@ -10,6 +10,9 @@ export const NEUTRAL: Adjustments = { brightness: 100, contrast: 100, saturation
 export const isNeutral = (adjustments: Adjustments) =>
   adjustments.brightness === 100 && adjustments.contrast === 100 && adjustments.saturation === 100;
 
+export const sameAdjustments = (a: Adjustments, b: Adjustments) =>
+  a.brightness === b.brightness && a.contrast === b.contrast && a.saturation === b.saturation;
+
 /** CSS equivalent, so previews match the exported pixels. */
 export const toCssFilter = ({ brightness, contrast, saturation }: Adjustments) =>
   isNeutral({ brightness, contrast, saturation })
@@ -39,4 +42,11 @@ export const adjustPixels = (data: Uint8ClampedArray, adjustments: Adjustments) 
     data[i + 1] = gray + (g - gray) * saturation;
     data[i + 2] = gray + (b - gray) * saturation;
   }
+};
+
+/** Allowed values for each adjustment, the same the web sliders offer. */
+export const ADJUSTMENT_RANGES: Readonly<Record<keyof Adjustments, readonly [min: number, max: number]>> = {
+  brightness: [50, 150],
+  contrast: [50, 200],
+  saturation: [0, 200],
 };

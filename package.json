@@ -3,15 +3,25 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "bin": {
+    "bindpdf": "dist-cli/bindpdf.js"
+  },
+  "files": [
+    "dist-cli"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:cli": "tsc --noEmit && vite build -c vite.cli.config.ts",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
-    "pdf-lib": "^1.17.1"
+    "@inquirer/core": "^12.0.6",
+    "@inquirer/prompts": "^8.7.5",
+    "pdf-lib": "^1.17.1",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
