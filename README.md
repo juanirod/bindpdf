@@ -95,7 +95,7 @@ To turn it on in a new repo: **Settings → Pages → Build and deployment → S
 
 ## Contributing
 
-Issues and pull requests are welcome. Before opening a PR, make sure `npm test`, `npm run build` and `npm run build:cli` pass.
+Issues and pull requests are welcome. Before opening a PR, make sure `npm test`, `npm run build` and `npm run build:cli` pass. CI runs them on every pull request, on Node 20, 22 and 24.
 
 ## License
 
