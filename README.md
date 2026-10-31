@@ -70,9 +70,9 @@ bindpdf -i *.jpg
 
 Without `--sort` or `--order`, pages follow the order you list the images in.
 
-Without adjustments, `--max-size` or `--quality`, photos go into the PDF exactly as they are, which is fastest but keeps their full size. For phone photos of documents, `--max-size 1600 --quality 75` usually makes the PDF around ten times smaller.
+Without adjustments, `--max-size` or `--quality`, photos go into the PDF exactly as they are, which is fastest but keeps their full size. For phone photos of documents, `--max-size 1600 --quality 75` usually makes the PDF around ten times smaller. When a PDF built without these options is larger than 20 MB, `bindpdf` prints a tip on stderr with the size it would have with them.
 
-**Interactive mode** lists the pages with their dates. Use ↑↓ to move, space to grab a page and drop it somewhere else, `s` to sort by date, `d` to remove a page and enter when you're done. Flags you pass along with `-i` become the starting choices.
+**Interactive mode** lists the pages with their dates. Use ↑↓ to move, space to grab a page and drop it somewhere else, `s` to sort by date, `d` to remove a page and enter when you're done. Before the file name, it offers the PDF size (original, smaller or smallest) with an estimate of how much each one weighs. Flags you pass along with `-i` become the starting choices.
 
 Saved presets live in `~/.config/bindpdf/presets.json` (or `$XDG_CONFIG_HOME/bindpdf/`). They are separate from the presets saved in the browser.
 

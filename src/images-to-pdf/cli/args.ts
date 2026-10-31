@@ -61,7 +61,7 @@ Output:
       --quality <n>          JPEG quality from 1 to 100 (default 92); re-encodes every JPEG
 
 Other:
-  -i, --interactive          Choose order, adjustments and output step by step
+  -i, --interactive          Choose order, adjustments, PDF size and output step by step
       --list-presets         List built-in and saved presets
       --delete-preset <name> Delete a saved preset
   -h, --help                 Show this help

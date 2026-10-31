@@ -25,6 +25,10 @@ beforeAll(async () => {
     .jpeg()
     .withMetadata({ orientation: 6 })
     .toBuffer();
+  const noisy = await sharp({ create: { width: 64, height: 64, channels: 3, background: "#808080", noise: { type: "gaussian", mean: 128, sigma: 60 } } })
+    .jpeg({ quality: 100 })
+    .toBuffer();
+  files.set("noisy.jpg", { name: "noisy.jpg", bytes: new Uint8Array(noisy), lastModified: 0 });
   files.set("rotated.jpg", { name: "rotated.jpg", bytes: new Uint8Array(sideways), lastModified: 0 });
   files.set("notes.txt", { name: "notes.txt", bytes: new Uint8Array([1, 2, 3]), lastModified: 0 });
 });
@@ -105,15 +109,46 @@ describe("runCli bind", () => {
   });
 
   it("re-encodes JPEGs at --quality", async () => {
-    const noisy = await sharp({ create: { width: 64, height: 64, channels: 3, background: "#808080", noise: { type: "gaussian", mean: 128, sigma: 60 } } })
-      .jpeg({ quality: 100 })
-      .toBuffer();
-    files.set("noisy.jpg", { name: "noisy.jpg", bytes: new Uint8Array(noisy), lastModified: 0 });
     const original = setup();
     const low = setup();
     expect(await runCli(["noisy.jpg"], original.deps)).toBe(0);
     expect(await runCli(["noisy.jpg", "--quality", "20"], low.deps)).toBe(0);
     expect(low.written.get("images.pdf")!.length).toBeLessThan(original.written.get("images.pdf")!.length);
+  });
+
+  it("suggests compressing a large PDF on stderr, without changing the result", async () => {
+    const { deps, out, err } = setup({ largePdfBytes: 100 });
+    expect(await runCli(["noisy.jpg"], deps)).toBe(0);
+    expect(out).toEqual(["Wrote images.pdf (1 page)."]);
+    expect(err).toHaveLength(1);
+    expect(err[0]).toMatch(/^Tip: images\.pdf is \d+ KB\. Add --max-size 1600 --quality 75 to make it about \d+ KB\.$/);
+  });
+
+  it("gives no tip when size options are passed or the PDF is small", async () => {
+    for (const args of [["--quality", "92"], ["--max-size", "100"]]) {
+      const { deps, err } = setup({ largePdfBytes: 100 });
+      expect(await runCli(["noisy.jpg", ...args], deps)).toBe(0);
+      expect(err).toEqual([]);
+    }
+    const { deps, err } = setup();
+    expect(await runCli(["noisy.jpg"], deps)).toBe(0);
+    expect(err).toEqual([]);
+  });
+
+  it("lets interactive mode pick the compression, with estimates for each choice", async () => {
+    let estimates: number[] = [];
+    const { deps, err, written } = setup({
+      largePdfBytes: 100,
+      interact: async (session, _presets, estimate) => {
+        estimates = await Promise.all([{}, { quality: 20 }].map((compression) => estimate(session.batch, session.adjustments, compression)));
+        return { ...session, compression: { quality: 20 } };
+      },
+    });
+    expect(await runCli(["noisy.jpg", "-i"], deps)).toBe(0);
+    expect(estimates[0]).toBe(files.get("noisy.jpg")!.bytes.length);
+    expect(estimates[1]).toBeLessThan(estimates[0]);
+    expect(written.get("images.pdf")!.length).toBeLessThan(estimates[0]);
+    expect(err).toEqual([]);
   });
 
   it("sorts by date with --sort date", async () => {
