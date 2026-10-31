@@ -43,4 +43,27 @@ describe("adjustImage", () => {
     expect(g).toBe(b);
     expect(a).toBe(255);
   });
+
+  it("re-encodes at the requested size and quality even without adjustments", async () => {
+    const calls: unknown[] = [];
+    const raw: RawImage = { width: 1, height: 1, data: new Uint8ClampedArray([1, 2, 3, 255]) };
+    const codec: ImageCodec = {
+      decode: async (_bytes, type, options) => {
+        calls.push(["decode", type, options]);
+        return raw;
+      },
+      encode: async (_raw, format, options) => {
+        calls.push(["encode", format, options]);
+        return new Uint8Array([7]);
+      },
+    };
+
+    const resized = await adjustImage(image, NEUTRAL, codec, { maxSize: 1000, quality: 60 });
+
+    expect(resized).toEqual({ ...image, bytes: new Uint8Array([7]) });
+    expect(calls).toEqual([
+      ["decode", "image/jpeg", { maxSize: 1000 }],
+      ["encode", "jpg", { quality: 60 }],
+    ]);
+  });
 });

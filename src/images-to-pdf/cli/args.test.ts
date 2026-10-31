@@ -36,6 +36,11 @@ describe("parseCliArgs", () => {
     });
   });
 
+  it("reads --quality and --max-size", () => {
+    const command = parseCliArgs(["a.jpg", "--quality", "70", "--max-size", "2000"]);
+    expect(command).toMatchObject({ kind: "bind", options: { quality: 70, maxSize: 2000 } });
+  });
+
   it("reads a manual order as 0-based positions", () => {
     const command = parseCliArgs(["--order", "3, 1,2", "a", "b", "c"]);
     expect(command).toMatchObject({ options: { order: { kind: "manual", positions: [2, 0, 1] } } });
@@ -65,6 +70,11 @@ describe("parseCliArgs", () => {
     [["--order", "1,1", "a", "b"], "--order must list each of the 2 images once, e.g. 2,1."],
     [["--order", "1,x", "a", "b"], "--order must list each of the 2 images once, e.g. 2,1."],
     [["--order", "1,2", "-s", "date", "a", "b"], "Use either --sort or --order, not both."],
+    [["--quality", "0", "a"], "--quality must be a whole number from 1 to 100."],
+    [["--quality", "101", "a"], "--quality must be a whole number from 1 to 100."],
+    [["--quality", "7.5", "a"], "--quality must be a whole number from 1 to 100."],
+    [["--max-size", "99", "a"], "--max-size must be a whole number from 100 to 20000."],
+    [["--max-size", "big", "a"], "--max-size must be a whole number from 100 to 20000."],
     [["--nope", "a"], "Unknown option '--nope'"],
   ])("rejects %j with a usage error", (argv, message) => {
     expect(() => parseCliArgs(argv)).toThrow(UsageError);

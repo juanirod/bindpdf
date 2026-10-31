@@ -47,6 +47,7 @@ npm link
 bindpdf *.jpg --sort date --preset scanned-black-white -o book.pdf
 bindpdf cover.png page-*.jpg --brightness 110 --contrast 130
 bindpdf a.jpg b.jpg c.jpg --order 3,1,2
+bindpdf *.jpg --max-size 1600 --quality 75 -o smaller.pdf
 bindpdf -i *.jpg
 ```
 
@@ -61,11 +62,15 @@ bindpdf -i *.jpg
 | `--save-preset <name>` | Save the resulting adjustments as a preset |
 | `-o, --output <file>` | PDF to write (default: `images.pdf`) |
 | `--page-size <size>` | `image` (default), `a4` or `letter` |
+| `--max-size <px>` | Shrink images whose longest side is larger, from 100 to 20000 |
+| `--quality <n>` | JPEG quality from 1 to 100 (default 92); re-encodes every JPEG |
 | `-i, --interactive` | Choose order, adjustments, page size and file name step by step |
 | `--list-presets` | List built-in and saved presets |
 | `--delete-preset <name>` | Delete a saved preset |
 
 Without `--sort` or `--order`, pages follow the order you list the images in.
+
+Without adjustments, `--max-size` or `--quality`, photos go into the PDF exactly as they are, which is fastest but keeps their full size. For phone photos of documents, `--max-size 1600 --quality 75` usually makes the PDF around ten times smaller.
 
 **Interactive mode** lists the pages with their dates. Use ↑↓ to move, space to grab a page and drop it somewhere else, `s` to sort by date, `d` to remove a page and enter when you're done. Flags you pass along with `-i` become the starting choices.
 
