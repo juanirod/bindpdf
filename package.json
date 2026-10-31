@@ -3,9 +3,16 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "bin": {
+    "bindpdf": "dist-cli/bindpdf.js"
+  },
+  "files": [
+    "dist-cli"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:cli": "tsc --noEmit && vite build -c vite.cli.config.ts",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"

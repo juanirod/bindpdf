@@ -40,3 +40,10 @@ export const adjustPixels = (data: Uint8ClampedArray, adjustments: Adjustments) 
     data[i + 2] = gray + (b - gray) * saturation;
   }
 };
+
+/** Allowed values for each adjustment, the same the web sliders offer. */
+export const ADJUSTMENT_RANGES: Readonly<Record<keyof Adjustments, readonly [min: number, max: number]>> = {
+  brightness: [50, 150],
+  contrast: [50, 200],
+  saturation: [0, 200],
+};
