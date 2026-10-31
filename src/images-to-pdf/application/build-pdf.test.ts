@@ -2,7 +2,7 @@ import { crc32, deflateSync } from "node:zlib";
 import { PDFDocument } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 import type { BatchImage } from "../domain/batch";
-import { buildPdf, EmptyBatchError, fitImage } from "./build-pdf";
+import { buildPdf, createPdfBuilder, EmptyBatchError, fitImage } from "./build-pdf";
 
 // Builds a valid grayscale PNG of the given size, so fixtures stay readable.
 const makePng = (width: number, height: number): Uint8Array<ArrayBuffer> => {
@@ -71,6 +71,22 @@ describe("buildPdf", () => {
   it("uses Letter pages", async () => {
     const pdf = await PDFDocument.load(await buildPdf([png("tall", 1, 2)], { pageSize: "letter" }));
     expect(pdf.getPage(0).getSize()).toEqual({ width: 612, height: 792 });
+  });
+});
+
+describe("createPdfBuilder", () => {
+  it("adds pages one at a time, in the order they are added", async () => {
+    const builder = await createPdfBuilder({ pageSize: "a4" });
+    await builder.addPage(png("tall", 1, 2));
+    await builder.addPage(png("wide", 2, 1));
+
+    const pdf = await PDFDocument.load(await builder.save());
+    expect(pdf.getPages().map((page) => page.getWidth() > page.getHeight())).toEqual([false, true]);
+  });
+
+  it("rejects saving with no pages", async () => {
+    const builder = await createPdfBuilder();
+    await expect(builder.save()).rejects.toBeInstanceOf(EmptyBatchError);
   });
 });
 

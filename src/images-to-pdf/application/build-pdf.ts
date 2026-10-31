@@ -39,20 +39,40 @@ const pageFor = (image: Size, pageSize: PageSize): Size => {
   return image.width > image.height ? { width: long, height: short } : { width: short, height: long };
 };
 
+/** Builds a PDF one page at a time, so each image can be released once it is added. */
+export interface PdfBuilder {
+  addPage(image: BatchImage): Promise<void>;
+  /** Rejects with EmptyBatchError when no page was added. */
+  save(): Promise<Uint8Array>;
+}
+
+export const createPdfBuilder = async ({ pageSize = "image" }: BuildPdfOptions = {}): Promise<PdfBuilder> => {
+  const pdf = await PDFDocument.create();
+  let pages = 0;
+  return {
+    async addPage(image) {
+      const embedded =
+        image.format === "png" ? await pdf.embedPng(image.bytes) : await pdf.embedJpg(image.bytes);
+      const size = pageFor(embedded, pageSize);
+      const page = pdf.addPage([size.width, size.height]);
+      page.drawImage(embedded, fitImage(embedded, size));
+      pages++;
+    },
+    async save() {
+      if (pages === 0) throw new EmptyBatchError();
+      return pdf.save();
+    },
+  };
+};
+
 /** Builds a PDF with one page per image, in batch order. */
 export const buildPdf = async (
   batch: readonly BatchImage[],
-  { pageSize = "image" }: BuildPdfOptions = {},
+  options: BuildPdfOptions = {},
 ): Promise<Uint8Array> => {
   if (batch.length === 0) throw new EmptyBatchError();
 
-  const pdf = await PDFDocument.create();
-  for (const image of batch) {
-    const embedded =
-      image.format === "png" ? await pdf.embedPng(image.bytes) : await pdf.embedJpg(image.bytes);
-    const size = pageFor(embedded, pageSize);
-    const page = pdf.addPage([size.width, size.height]);
-    page.drawImage(embedded, fitImage(embedded, size));
-  }
-  return pdf.save();
+  const builder = await createPdfBuilder(options);
+  for (const image of batch) await builder.addPage(image);
+  return builder.save();
 };
