@@ -15,7 +15,7 @@ export interface ImageCodec {
   encode(image: RawImage, format: ImageFormat): Promise<Uint8Array<ArrayBuffer>>;
 }
 
-/** Where user presets are kept. Failures are silent: presets still work for the session. */
+/** Where user presets are kept. A missing or unreadable store loads as no presets. */
 export interface PresetStore {
   load(): Preset[];
   store(presets: readonly Preset[]): void;
