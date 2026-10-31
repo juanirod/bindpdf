@@ -1,4 +1,4 @@
-# pdfy
+# BindPDF
 
 Turn a batch of photos into one PDF, right in your browser. Nothing is uploaded: every image is processed on your own computer.
 
