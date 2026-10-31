@@ -1,5 +1,5 @@
 import type { BatchImage, ImageFormat } from "../domain/batch";
-import { readExifDate } from "../domain/exif-date";
+import { readExifDate, readExifOrientation } from "../domain/exif";
 import type { ImageCodec } from "./ports";
 
 /** An image file as read by any platform: browser File or file on disk. */
@@ -29,20 +29,29 @@ const embeddableFormat = (bytes: Uint8Array): ImageFormat | null => {
   return null;
 };
 
+const decodeOrReject = (source: ImageSource, codec: ImageCodec, type: string | undefined) =>
+  codec.decode(source.bytes, type).catch(() => {
+    throw new UnsupportedImageError(source.name);
+  });
+
 /**
  * Turns an image file into a batch image, converting formats pdf-lib cannot embed (WebP, GIF, BMP…) to PNG.
- * The date comes from the JPEG's EXIF capture date, falling back to the file's last-modified time.
+ * JPEGs stored sideways or mirrored (EXIF orientation other than 1) are re-encoded upright, since pdf-lib ignores
+ * the tag; upright JPEGs are kept as they are. The date comes from the JPEG's EXIF capture date, falling back to the
+ * file's last-modified time.
  */
 export const loadImage = async (source: ImageSource, codec: ImageCodec): Promise<BatchImage> => {
   const base = { id: crypto.randomUUID(), name: source.name, takenAt: source.lastModified };
   const format = embeddableFormat(source.bytes);
   if (format === "jpg") {
-    return { ...base, format, bytes: source.bytes, takenAt: readExifDate(source.bytes) ?? source.lastModified };
+    const takenAt = readExifDate(source.bytes) ?? source.lastModified;
+    if (readExifOrientation(source.bytes) === 1) return { ...base, format, bytes: source.bytes, takenAt };
+    // Both codecs apply the orientation when decoding and write no EXIF when encoding, so it isn't applied twice.
+    const raw = await decodeOrReject(source, codec, "image/jpeg");
+    return { ...base, format, bytes: await codec.encode(raw, "jpg"), takenAt };
   }
   if (format === "png") return { ...base, format, bytes: source.bytes };
 
-  const raw = await codec.decode(source.bytes, source.type).catch(() => {
-    throw new UnsupportedImageError(source.name);
-  });
+  const raw = await decodeOrReject(source, codec, source.type);
   return { ...base, format: "png", bytes: await codec.encode(raw, "png") };
 };

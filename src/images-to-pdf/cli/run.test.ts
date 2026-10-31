@@ -20,6 +20,12 @@ beforeAll(async () => {
   await image("a.png", 10, 300, "png");
   await image("b.jpg", 20, 100, "jpeg");
   await image("c.webp", 30, 200, "webp");
+  // Stored sideways (40×10) with EXIF orientation 6, the way many phones save portrait photos.
+  const sideways = await sharp({ create: { width: 40, height: 10, channels: 3, background: "#c84" } })
+    .jpeg()
+    .withMetadata({ orientation: 6 })
+    .toBuffer();
+  files.set("rotated.jpg", { name: "rotated.jpg", bytes: new Uint8Array(sideways), lastModified: 0 });
   files.set("notes.txt", { name: "notes.txt", bytes: new Uint8Array([1, 2, 3]), lastModified: 0 });
 });
 
@@ -74,6 +80,15 @@ describe("runCli bind", () => {
     expect(await pageWidths()).toEqual([30, 10, 20]);
     expect(out).toEqual(["Wrote images.pdf (3 pages)."]);
     expect(err).toEqual([]);
+  });
+
+  it("turns rotated photos upright, with or without adjustments", async () => {
+    for (const args of [[], ["-c", "130"]]) {
+      const { deps, written } = setup();
+      expect(await runCli(["rotated.jpg", ...args], deps)).toBe(0);
+      const [page] = (await PDFDocument.load(written.get("images.pdf")!)).getPages();
+      expect(page.getSize()).toEqual({ width: 10, height: 40 });
+    }
   });
 
   it("sorts by date with --sort date", async () => {

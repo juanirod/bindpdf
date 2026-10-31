@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { readExifDate } from "./exif-date";
+import { readExifDate, readExifOrientation } from "./exif";
 
+const ORIENTATION = 0x0112;
 const DATE_TIME = 0x0132;
 const EXIF_IFD_POINTER = 0x8769;
 const DATE_TIME_ORIGINAL = 0x9003;
@@ -8,9 +9,10 @@ const DATE_TIME_ORIGINAL = 0x9003;
 interface Tags {
   dateTime?: string;
   dateTimeOriginal?: string;
+  orientation?: number;
 }
 
-// Builds a minimal JPEG whose APP1 segment holds a TIFF/EXIF block with the given dates.
+// Builds a minimal JPEG whose APP1 segment holds a TIFF/EXIF block with the given tags.
 const makeJpeg = (tags: Tags, littleEndian = true): Uint8Array => {
   const tiff = new DataView(new ArrayBuffer(256));
   const u16 = (at: number, value: number) => tiff.setUint16(at, value, littleEndian);
@@ -23,7 +25,10 @@ const makeJpeg = (tags: Tags, littleEndian = true): Uint8Array => {
   u32(4, 8); // IFD0 offset
 
   // IFD0 at 8: DateTime and the pointer to the Exif IFD.
+  // A SHORT value sits in the first two bytes of its 4-byte field, so its 32-bit form depends on byte order.
+  const short = (value: number) => (littleEndian ? value : value << 16);
   const ifd0 = [
+    ...(tags.orientation !== undefined ? [[ORIENTATION, 3, 1, short(tags.orientation)]] : []),
     ...(tags.dateTime ? [[DATE_TIME, 2, 20, 100]] : []),
     [EXIF_IFD_POINTER, 4, 1, 50],
   ];
@@ -86,5 +91,26 @@ describe("readExifDate", () => {
     expect(readExifDate(makeJpeg({ dateTimeOriginal: "0000:00:00 00:00:00" }))).toBeNull();
     expect(readExifDate(new Uint8Array([0x89, 0x50, 0x4e, 0x47]))).toBeNull();
     expect(readExifDate(makeJpeg({ dateTimeOriginal: "2024:03:15 14:30:05" }).slice(0, 40))).toBeNull();
+  });
+});
+
+describe("readExifOrientation", () => {
+  it("reads the orientation tag, in either byte order", () => {
+    expect(readExifOrientation(makeJpeg({ orientation: 6 }))).toBe(6);
+    expect(readExifOrientation(makeJpeg({ orientation: 8 }, false))).toBe(8);
+  });
+
+  it("reads it next to other tags", () => {
+    const jpeg = makeJpeg({ orientation: 3, dateTimeOriginal: "2024:03:15 14:30:05" });
+    expect(readExifOrientation(jpeg)).toBe(3);
+    expect(readExifDate(jpeg)).toBe(local(2024, 3, 15, 14, 30, 5));
+  });
+
+  it("treats a missing, invalid or unreadable orientation as upright (1)", () => {
+    expect(readExifOrientation(makeJpeg({}))).toBe(1);
+    expect(readExifOrientation(makeJpeg({ orientation: 0 }))).toBe(1);
+    expect(readExifOrientation(makeJpeg({ orientation: 9 }))).toBe(1);
+    expect(readExifOrientation(new Uint8Array([0x89, 0x50, 0x4e, 0x47]))).toBe(1);
+    expect(readExifOrientation(makeJpeg({ orientation: 6 }).slice(0, 20))).toBe(1);
   });
 });

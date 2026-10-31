@@ -1,3 +1,4 @@
+const ORIENTATION = 0x0112;
 const DATE_TIME = 0x0132;
 const EXIF_IFD_POINTER = 0x8769;
 const DATE_TIME_ORIGINAL = 0x9003;
@@ -5,7 +6,10 @@ const EXIF_DATE = /^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/;
 
 interface Entry {
   readonly count: number;
+  /** The 4-byte value field, read as LONG (offsets and pointers). */
   readonly value: number;
+  /** The same field read as SHORT, which sits in its first two bytes in either byte order. */
+  readonly short: number;
 }
 
 const readIfd = (tiff: DataView, offset: number, le: boolean) => {
@@ -16,6 +20,7 @@ const readIfd = (tiff: DataView, offset: number, le: boolean) => {
     entries.set(tiff.getUint16(at, le), {
       count: tiff.getUint32(at + 4, le),
       value: tiff.getUint32(at + 8, le),
+      short: tiff.getUint16(at + 8, le),
     });
   }
   return entries;
@@ -46,8 +51,8 @@ const readTiffDate = (tiff: DataView): number | null => {
 const isExifHeader = (view: DataView, at: number) =>
   view.getUint32(at) === 0x45786966 && view.getUint16(at + 4) === 0; // "Exif\0\0"
 
-/** Returns when a JPEG was taken, from its EXIF metadata, or null when it has no usable date. */
-export const readExifDate = (bytes: Uint8Array): number | null => {
+/** Finds the TIFF block inside a JPEG's EXIF segment and reads it, or returns null when there is none. */
+const readTiff = <T>(bytes: Uint8Array, read: (tiff: DataView) => T): T | null => {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   try {
     if (view.getUint16(0) !== 0xffd8) return null;
@@ -59,7 +64,7 @@ export const readExifDate = (bytes: Uint8Array): number | null => {
       const size = view.getUint16(offset + 2);
       if (marker === 0xffe1 && isExifHeader(view, offset + 4)) {
         const tiffStart = offset + 10;
-        return readTiffDate(new DataView(bytes.buffer, bytes.byteOffset + tiffStart, size - 8));
+        return read(new DataView(bytes.buffer, bytes.byteOffset + tiffStart, size - 8));
       }
       offset += 2 + size;
     }
@@ -68,4 +73,21 @@ export const readExifDate = (bytes: Uint8Array): number | null => {
     // Truncated or malformed metadata: reading past the buffer throws a RangeError.
     return null;
   }
+};
+
+/** Returns when a JPEG was taken, from its EXIF metadata, or null when it has no usable date. */
+export const readExifDate = (bytes: Uint8Array): number | null => readTiff(bytes, readTiffDate);
+
+/** EXIF orientation: 1 is upright; 2 to 8 are the mirrored and rotated ways a camera may store the pixels. */
+export type Orientation = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+
+const isOrientation = (value: number): value is Orientation => Number.isInteger(value) && value >= 1 && value <= 8;
+
+/** Returns how a JPEG's pixels must be turned to display upright, or 1 when it has no valid orientation tag. */
+export const readExifOrientation = (bytes: Uint8Array): Orientation => {
+  const value = readTiff(bytes, (tiff) => {
+    const le = tiff.getUint16(0) === 0x4949;
+    return readIfd(tiff, tiff.getUint32(4, le), le).get(ORIENTATION)?.short;
+  });
+  return value != null && isOrientation(value) ? value : 1;
 };
