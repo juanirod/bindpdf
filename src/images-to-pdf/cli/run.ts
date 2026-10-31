@@ -1,13 +1,17 @@
 import { adjustImage } from "../application/adjust-image";
-import { buildPdf, type PageSize } from "../application/build-pdf";
+import { createPdfBuilder, type PageSize } from "../application/build-pdf";
 import { loadImage, UnsupportedImageError, type ImageSource } from "../application/load-image";
 import type { ImageCodec, PresetStore } from "../application/ports";
 import { NEUTRAL, type Adjustments } from "../domain/adjustments";
 import { sortByDate, type BatchImage } from "../domain/batch";
 import { BUILT_IN_PRESETS, deletePreset, InvalidPresetNameError, savePreset, type Preset } from "../domain/presets";
 import { HELP, parseCliArgs, UsageError, type BindOptions, type Order } from "./args";
+import { eachInOrder } from "./each-in-order";
 import { describeAdjustments, findPreset, isBuiltIn, presetSlug } from "./presets";
 import type { Progress } from "./progress";
+
+/** Pages adjusted at once: sharp works on libuv's 4 threads by default, and each page in flight holds its pixels. */
+const PARALLEL_PAGES = 4;
 
 /** What interactive mode can change before the PDF is built. */
 export interface Session {
@@ -108,17 +112,23 @@ const bind = async (options: BindOptions, deps: CliDeps) => {
     adjustments = session.adjustments;
   }
 
-  const adjusted: BatchImage[] = [];
-  for (const [index, image] of session.batch.entries()) {
-    deps.progress?.show(`Adjusting page ${index + 1}/${session.batch.length}…`);
-    adjusted.push(await adjustImage(image, adjustments, deps.codec));
-  }
+  // Each adjusted page goes into the PDF as soon as it is ready, so adjusted copies don't pile up.
+  const builder = await createPdfBuilder({ pageSize: session.pageSize });
+  const pages = session.batch.length;
+  await eachInOrder(
+    session.batch,
+    PARALLEL_PAGES,
+    (image) => adjustImage(image, adjustments, deps.codec),
+    async (page, index) => {
+      deps.progress?.show(`Adjusting page ${index + 1}/${pages}…`);
+      await builder.addPage(page);
+    },
+  );
   deps.progress?.show("Building the PDF…");
-  const pdf = await buildPdf(adjusted, { pageSize: session.pageSize });
+  const pdf = await builder.save();
   deps.progress?.show(`Writing ${session.output}…`);
   await deps.writeFile(session.output, pdf);
   deps.progress?.clear();
-  const pages = adjusted.length;
   deps.out(`Wrote ${session.output} (${pages} ${pages === 1 ? "page" : "pages"}).`);
 
   if (options.savePreset !== undefined) {
