@@ -1,0 +1,361 @@
+:root {
+  --paper: #e9edf2;
+  --ink: #1b2230;
+  --ink-soft: #5a6478;
+  --sheet: #ffffff;
+  --clip: #f2c230;
+  --error: #c2412d;
+  --line: #c9d0db;
+
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.25rem;
+  --step-4: clamp(3rem, 8vw, 5.5rem);
+
+  color-scheme: light;
+  font-family: "Bricolage Grotesque", system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #161b25;
+    --ink: #e7ebf2;
+    --ink-soft: #9aa4b8;
+    --sheet: #232a38;
+    --line: #333c4e;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  padding: 0 clamp(1rem, 4vw, 3rem) 7rem;
+  background: var(--paper);
+  line-height: 1.5;
+}
+
+:focus-visible {
+  outline: 3px solid var(--clip);
+  outline-offset: 2px;
+}
+
+.masthead {
+  max-width: 70ch;
+  padding: clamp(2rem, 6vw, 4rem) 0 2rem;
+}
+
+.masthead h1 {
+  margin: 0;
+  font-size: var(--step-4);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+}
+
+.masthead p {
+  margin: 1rem 0 0;
+  font-size: var(--step-1);
+  color: var(--ink-soft);
+  max-width: 48ch;
+}
+
+/* Drop zone: large when empty, a slim strip once pages exist. */
+.dropzone {
+  display: grid;
+  gap: 0.25rem;
+  place-content: center;
+  min-height: 16rem;
+  padding: 2rem;
+  border: 2px dashed var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 120ms, background-color 120ms;
+}
+
+.dropzone strong {
+  font-size: var(--step-1);
+  font-weight: 600;
+}
+
+.dropzone span {
+  color: var(--ink-soft);
+}
+
+.dropzone:hover,
+.dropzone.over {
+  border-color: var(--ink);
+}
+
+.dropzone.over {
+  background: color-mix(in srgb, var(--clip) 18%, transparent);
+}
+
+.dropzone:has(input:focus-visible) {
+  outline: 3px solid var(--clip);
+  outline-offset: 2px;
+}
+
+.dropzone.compact {
+  min-height: 0;
+  padding: 1rem 1.25rem;
+  place-content: start;
+  grid-auto-flow: column;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.notice {
+  margin: 1rem 0 0;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid var(--error);
+  background: var(--sheet);
+  max-width: 70ch;
+}
+
+/* Adjustments: one look for the whole batch. */
+.adjust {
+  margin-top: 2rem;
+  padding: 1.25rem;
+  background: var(--sheet);
+  border-radius: 6px;
+}
+
+.adjust[hidden] {
+  display: none;
+}
+
+.adjust h2 {
+  margin: 0;
+  font-size: var(--step-1);
+  font-weight: 800;
+}
+
+.hint {
+  margin: 0.25rem 0 1rem;
+  color: var(--ink-soft);
+}
+
+.adjust-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1rem 1.5rem;
+  align-items: end;
+}
+
+.slider {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.25rem 0.75rem;
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+}
+
+.slider input {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  accent-color: var(--ink);
+}
+
+.slider output {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.preset-save {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.preset-save button {
+  font: inherit;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.field-error {
+  margin: 0.5rem 0 0;
+  color: var(--error);
+}
+
+/* Pages: each image sits on a sheet, numbered in PDF order. */
+.pages {
+  list-style: none;
+  margin: 2rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 2rem 1.5rem;
+}
+
+.page {
+  display: grid;
+  gap: 0.5rem;
+  cursor: grab;
+}
+
+.page.dragging {
+  opacity: 0.35;
+}
+
+.sheet {
+  aspect-ratio: 1 / 1.414;
+  display: grid;
+  place-items: center;
+  padding: 0.75rem;
+  background: var(--sheet);
+  border-radius: 2px;
+  box-shadow:
+    0 1px 0 var(--line),
+    4px 4px 0 -1px var(--sheet),
+    4px 4px 0 0 var(--line);
+}
+
+.sheet img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  filter: var(--adjust, none);
+}
+
+.meta {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.number {
+  min-width: 1.75rem;
+  padding: 0 0.4rem;
+  font-weight: 800;
+  text-align: center;
+  background: var(--clip);
+  color: #1b2230;
+  border-radius: 2px;
+}
+
+.name {
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tools {
+  display: flex;
+}
+
+.tools button {
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--step-1);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tools button:hover:not(:disabled) {
+  background: var(--line);
+}
+
+.tools button:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.tools .remove:hover {
+  color: var(--error);
+}
+
+/* Action bar pinned to the bottom while pages exist. */
+.actions {
+  position: fixed;
+  inset: auto 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.75rem 1rem;
+  padding: 1rem clamp(1rem, 4vw, 3rem);
+  background: var(--sheet);
+  border-top: 1px solid var(--line);
+}
+
+.actions[hidden] {
+  display: none;
+}
+
+.count {
+  font-weight: 600;
+  margin-right: auto;
+  align-self: center;
+}
+
+.field {
+  display: grid;
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+}
+
+.field input,
+.field select {
+  font: inherit;
+  font-size: var(--step-0);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+}
+
+.field input {
+  width: min(16rem, 60vw);
+}
+
+.actions button {
+  font: inherit;
+  font-weight: 600;
+  padding: 0.6rem 1.1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.primary {
+  border: 0;
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.primary:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.ghost {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pdfy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header class="masthead">
+      <h1>pdfy</h1>
+      <p>Drop a batch of images, put them in order, and download them as one PDF. Nothing leaves your computer.</p>
+    </header>
+
+    <main>
+      <label class="dropzone" id="dropzone">
+        <input id="file-input" type="file" accept="image/*" multiple hidden />
+        <strong>Drop images here</strong>
+        <span>or click to choose files. JPG, PNG, WebP and GIF work.</span>
+      </label>
+
+      <p class="notice" id="notice" role="status" hidden></p>
+
+      <section class="adjust" id="adjust" hidden aria-labelledby="adjust-title">
+        <h2 id="adjust-title">Adjust images</h2>
+        <p class="hint">Applies to every page, so the whole PDF shares one look.</p>
+
+        <div class="adjust-grid">
+          <label class="field">
+            <span>Preset</span>
+            <select id="preset"></select>
+          </label>
+          <label class="slider">
+            <span>Brightness</span>
+            <input id="brightness" type="range" min="50" max="150" step="1" value="100" />
+            <output for="brightness">100%</output>
+          </label>
+          <label class="slider">
+            <span>Contrast</span>
+            <input id="contrast" type="range" min="50" max="200" step="1" value="100" />
+            <output for="contrast">100%</output>
+          </label>
+          <label class="slider">
+            <span>Saturation</span>
+            <input id="saturation" type="range" min="0" max="200" step="1" value="100" />
+            <output for="saturation">100%</output>
+          </label>
+        </div>
+
+        <div class="preset-save">
+          <label class="field">
+            <span>Save these settings as</span>
+            <input id="preset-name" type="text" placeholder="Book scans" />
+          </label>
+          <button type="button" class="ghost" id="save-preset">Save preset</button>
+          <button type="button" class="ghost" id="delete-preset" hidden>Delete preset</button>
+        </div>
+        <p class="field-error" id="preset-error" role="alert" hidden></p>
+      </section>
+
+      <ol class="pages" id="pages" aria-label="Pages in the PDF"></ol>
+    </main>
+
+    <footer class="actions" id="actions" hidden>
+      <span class="count" id="count"></span>
+      <label class="field">
+        <span>File name</span>
+        <input id="filename" type="text" value="images" spellcheck="false" />
+      </label>
+      <label class="field">
+        <span>Page size</span>
+        <select id="page-size">
+          <option value="image">Image size</option>
+          <option value="a4">A4</option>
+          <option value="letter">Letter</option>
+        </select>
+      </label>
+      <button type="button" class="ghost" id="sort-by-date">Sort by date</button>
+      <button type="button" class="ghost" id="clear">Clear all</button>
+      <button type="button" class="primary" id="download">Download PDF</button>
+    </footer>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
