@@ -1,4 +1,4 @@
-import { NEUTRAL, type Adjustments } from "../domain/adjustments";
+import { NEUTRAL, sameAdjustments, type Adjustments } from "../domain/adjustments";
 import {
   BUILT_IN_PRESETS,
   deletePreset,
@@ -10,9 +10,6 @@ import { localPresetStore } from "../infrastructure/browser/local-preset-store";
 
 const SLIDERS = ["brightness", "contrast", "saturation"] as const;
 const CUSTOM = "";
-
-const sameAdjustments = (a: Adjustments, b: Adjustments) =>
-  SLIDERS.every((key) => a[key] === b[key]);
 
 /** Wires the "Adjust images" panel. Calls onChange with the adjustments every time they change. */
 export const mountAdjustmentsPanel = (

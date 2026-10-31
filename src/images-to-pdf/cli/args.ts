@@ -98,7 +98,7 @@ const manualOrder = (raw: string, count: number): Order => {
   return { kind: "manual", positions };
 };
 
-const withPdfExtension = (file: string) => (/\.pdf$/i.test(file) ? file : `${file}.pdf`);
+export const withPdfExtension = (file: string) => (/\.pdf$/i.test(file) ? file : `${file}.pdf`);
 
 const parse = (argv: readonly string[]) => {
   try {

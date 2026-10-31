@@ -5,7 +5,7 @@ import type { ImageSource } from "../application/load-image";
 import type { ImageCodec, PresetStore } from "../application/ports";
 import type { Preset } from "../domain/presets";
 import { sharpCodec } from "../infrastructure/node/sharp-codec";
-import { resolveAdjustments, runCli, type CliDeps, type Session } from "./run";
+import { CancelledError, resolveAdjustments, runCli, type CliDeps, type Session } from "./run";
 
 // Distinct sizes, so page order can be read back from the PDF.
 const files = new Map<string, ImageSource>();
@@ -168,6 +168,20 @@ describe("runCli bind", () => {
     expect(received!.batch.map((image) => image.name)).toEqual(["b.jpg", "a.png"]);
     expect(received!).toMatchObject({ output: "images.pdf", pageSize: "image" });
     expect(await pageWidths("picked.pdf")).toEqual([10, 20]);
+  });
+
+  it("writes nothing when interactive mode is cancelled", async () => {
+    const { deps, err, written } = setup({ interact: () => Promise.reject(new CancelledError()) });
+    expect(await runCli(["a.png", "-i"], deps)).toBe(130);
+    expect(err).toEqual(["Cancelled."]);
+    expect(written.size).toBe(0);
+  });
+
+  it("refuses interactive mode without a terminal", async () => {
+    const { deps, err, written } = setup();
+    expect(await runCli(["a.png", "-i"], deps)).toBe(1);
+    expect(err).toEqual(["Error: Interactive mode needs a terminal."]);
+    expect(written.size).toBe(0);
   });
 });
 

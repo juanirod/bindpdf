@@ -3,6 +3,7 @@ import { version } from "../../../package.json";
 import { createFilePresetStore } from "../infrastructure/node/file-preset-store";
 import { readImageFile } from "../infrastructure/node/read-image-file";
 import { sharpCodec } from "../infrastructure/node/sharp-codec";
+import { interact } from "./interactive";
 import { runCli } from "./run";
 
 process.exitCode = await runCli(process.argv.slice(2), {
@@ -13,4 +14,5 @@ process.exitCode = await runCli(process.argv.slice(2), {
   out: (line) => console.log(line),
   err: (line) => console.error(line),
   version,
+  ...(process.stdin.isTTY && process.stdout.isTTY && { interact }),
 });

@@ -10,6 +10,9 @@ export const NEUTRAL: Adjustments = { brightness: 100, contrast: 100, saturation
 export const isNeutral = (adjustments: Adjustments) =>
   adjustments.brightness === 100 && adjustments.contrast === 100 && adjustments.saturation === 100;
 
+export const sameAdjustments = (a: Adjustments, b: Adjustments) =>
+  a.brightness === b.brightness && a.contrast === b.contrast && a.saturation === b.saturation;
+
 /** CSS equivalent, so previews match the exported pixels. */
 export const toCssFilter = ({ brightness, contrast, saturation }: Adjustments) =>
   isNeutral({ brightness, contrast, saturation })

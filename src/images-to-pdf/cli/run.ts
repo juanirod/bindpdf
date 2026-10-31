@@ -31,6 +31,14 @@ export interface CliDeps {
 /** Fails the run with exit code 1. */
 class CliError extends Error {}
 
+/** The user quit interactive mode: nothing is written. */
+export class CancelledError extends Error {
+  constructor() {
+    super("Cancelled.");
+    this.name = "CancelledError";
+  }
+}
+
 /** Neutral, then the preset (by name or slug), then explicit values. */
 export const resolveAdjustments = (
   userPresets: readonly Preset[],
@@ -133,7 +141,7 @@ const removePreset = (query: string, deps: CliDeps) => {
   deps.out(`Deleted preset "${preset.name}".`);
 };
 
-/** Runs the CLI and returns its exit code: 0 done, 1 failed, 2 wrong usage. */
+/** Runs the CLI and returns its exit code: 0 done, 1 failed, 2 wrong usage, 130 cancelled. */
 export const runCli = async (argv: readonly string[], deps: CliDeps): Promise<number> => {
   let command;
   try {
@@ -153,6 +161,10 @@ export const runCli = async (argv: readonly string[], deps: CliDeps): Promise<nu
     if (command.kind === "bind") await bind(command.options, deps);
     return 0;
   } catch (error) {
+    if (error instanceof CancelledError) {
+      deps.err(error.message);
+      return 130;
+    }
     deps.err(`Error: ${(error as Error).message}`);
     return error instanceof UsageError || error instanceof InvalidPresetNameError ? 2 : 1;
   }

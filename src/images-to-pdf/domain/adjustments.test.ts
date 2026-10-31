@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adjustPixels, isNeutral, NEUTRAL, toCssFilter } from "./adjustments";
+import { adjustPixels, isNeutral, NEUTRAL, sameAdjustments, toCssFilter } from "./adjustments";
 
 const pixels = (...rgba: number[]) => new Uint8ClampedArray(rgba);
 
@@ -52,5 +52,12 @@ describe("toCssFilter", () => {
       "brightness(1.1) contrast(1.35) saturate(0)",
     );
     expect(toCssFilter(NEUTRAL)).toBe("none");
+  });
+});
+
+describe("sameAdjustments", () => {
+  it("compares every value", () => {
+    expect(sameAdjustments(NEUTRAL, { brightness: 100, contrast: 100, saturation: 100 })).toBe(true);
+    expect(sameAdjustments(NEUTRAL, { ...NEUTRAL, saturation: 99 })).toBe(false);
   });
 });
