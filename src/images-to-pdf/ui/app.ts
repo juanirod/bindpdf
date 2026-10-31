@@ -1,11 +1,23 @@
+import { adjustImage } from "../application/adjust-image";
 import { buildPdf, type PageSize } from "../application/build-pdf";
+import { loadImage, UnsupportedImageError } from "../application/load-image";
 import { NEUTRAL, toCssFilter, type Adjustments } from "../domain/adjustments";
 import { addImages, moveImage, removeImage, sortByDate, type BatchImage } from "../domain/batch";
-import { adjustImage } from "../infrastructure/adjust-image";
-import { readImage, UnsupportedImageError } from "../infrastructure/read-image";
+import { canvasCodec } from "../infrastructure/browser/canvas-codec";
 import { mountAdjustmentsPanel } from "./adjustments-panel";
 
 const MIME = { png: "image/png", jpg: "image/jpeg" } as const;
+const readImage = async (file: File) =>
+  loadImage(
+    {
+      name: file.name,
+      bytes: new Uint8Array(await file.arrayBuffer()),
+      lastModified: file.lastModified,
+      type: file.type,
+    },
+    canvasCodec,
+  );
+
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
 
 export const mountApp = (doc: Document) => {
@@ -205,7 +217,7 @@ export const mountApp = (doc: Document) => {
     download.disabled = true;
     download.textContent = "Building PDF…";
     try {
-      const adjusted = await Promise.all(batch.map((image) => adjustImage(image, adjustments)));
+      const adjusted = await Promise.all(batch.map((image) => adjustImage(image, adjustments, canvasCodec)));
       const bytes = await buildPdf(adjusted, { pageSize: pageSize.value as PageSize });
       const url = URL.createObjectURL(
         new Blob([bytes as Uint8Array<ArrayBuffer>], { type: "application/pdf" }),
