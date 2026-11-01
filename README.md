@@ -113,6 +113,15 @@ Every push to `main` runs the tests, builds the site and publishes it to GitHub 
 
 To turn it on in a new repo: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 
+## Releasing the CLI
+
+Pushing a `v*` tag publishes the CLI to npm through `.github/workflows/publish.yml`, using npm trusted publishing (no npm token stored in GitHub). The tag must match the `version` in `package.json`:
+
+```bash
+npm version patch   # bumps package.json, commits and creates the v* tag
+git push --follow-tags
+```
+
 ## Contributing
 
 Issues and pull requests are welcome. Before opening a PR, make sure `npm test`, `npm run build` and `npm run build:cli` pass. CI runs them on every pull request, on Node 20, 22 and 24.
