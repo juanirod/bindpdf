@@ -1,7 +1,26 @@
 {
   "name": "bindpdf",
-  "private": true,
   "version": "0.1.0",
+  "description": "Turn photos and scans into one PDF: reorder, filter and shrink them from the command line.",
+  "keywords": [
+    "pdf",
+    "images",
+    "jpg",
+    "png",
+    "scan",
+    "cli",
+    "merge"
+  ],
+  "homepage": "https://juanirod.github.io/bindpdf/",
+  "bugs": {
+    "url": "https://github.com/juanirod/bindpdf/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/juanirod/bindpdf.git"
+  },
+  "license": "MIT",
+  "author": "Juani",
   "type": "module",
   "bin": {
     "bindpdf": "dist-cli/bindpdf.js"
@@ -15,13 +34,17 @@
     "build:cli": "tsc --noEmit && vite build -c vite.cli.config.ts",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "npm test && npm run build:cli"
+  },
+  "engines": {
+    "node": "^20.17.0 || ^22.13.0 || >=23.5.0"
   },
   "dependencies": {
     "@inquirer/core": "^12.0.6",
     "@inquirer/prompts": "^8.7.5",
     "pdf-lib": "^1.17.1",
-    "sharp": "^0.34.5"
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
