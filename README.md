@@ -36,7 +36,7 @@ npm run dev     # open http://localhost:5173
 
 ## Command line
 
-Needs Node.js 20.17 or later. Install it globally, so `bindpdf` is on your PATH:
+Needs Node.js 20.17+, 22.13+ or 23.5+. Install it globally, so `bindpdf` is on your PATH:
 
 ```bash
 npm install -g bindpdf
