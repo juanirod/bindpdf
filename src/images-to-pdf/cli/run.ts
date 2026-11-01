@@ -1,5 +1,6 @@
-import { adjustImage } from "../application/adjust-image";
+import { adjustImage, type OutputOptions } from "../application/adjust-image";
 import { createPdfBuilder, type PageSize } from "../application/build-pdf";
+import { estimatePdfSize } from "../application/estimate-size";
 import { loadImage, UnsupportedImageError, type ImageSource } from "../application/load-image";
 import type { ImageCodec, PresetStore } from "../application/ports";
 import { NEUTRAL, type Adjustments } from "../domain/adjustments";
@@ -9,6 +10,7 @@ import { HELP, parseCliArgs, UsageError, type BindOptions, type Order } from "./
 import { eachInOrder } from "./each-in-order";
 import { describeAdjustments, findPreset, isBuiltIn, presetSlug } from "./presets";
 import type { Progress } from "./progress";
+import { LARGE_PDF_BYTES, SMALLER, sizeTip } from "./size";
 
 /** Pages adjusted at once: sharp works on libuv's 4 threads by default, and each page in flight holds its pixels. */
 const PARALLEL_PAGES = 4;
@@ -18,8 +20,17 @@ export interface Session {
   readonly batch: readonly BatchImage[];
   readonly adjustments: Adjustments;
   readonly pageSize: PageSize;
+  /** How pages are shrunk and re-encoded; empty keeps them as they are. */
+  readonly compression: OutputOptions;
   readonly output: string;
 }
+
+/** Estimates the PDF's size in bytes for a batch, adjustments and compression. */
+export type EstimateSize = (
+  batch: readonly BatchImage[],
+  adjustments: Adjustments,
+  compression: OutputOptions,
+) => Promise<number>;
 
 export interface CliDeps {
   readonly codec: ImageCodec;
@@ -32,7 +43,9 @@ export interface CliDeps {
   /** Status line for slow steps; absent when output isn't a terminal. */
   readonly progress?: Progress;
   /** Interactive mode; absent when the terminal can't run it. */
-  interact?(session: Session, presets: PresetStore): Promise<Session>;
+  interact?(session: Session, presets: PresetStore, estimate: EstimateSize): Promise<Session>;
+  /** PDFs larger than this, built without size options, get a compression tip. Defaults to 20 MB. */
+  readonly largePdfBytes?: number;
 }
 
 /** Fails the run with exit code 1. */
@@ -103,12 +116,17 @@ const bind = async (options: BindOptions, deps: CliDeps) => {
     batch: options.order.kind === "date" ? sortByDate(loaded) : loaded,
     adjustments,
     pageSize: options.pageSize,
+    compression: {
+      ...(options.maxSize !== undefined && { maxSize: options.maxSize }),
+      ...(options.quality !== undefined && { quality: options.quality }),
+    },
     output: options.output,
   };
+  const estimate: EstimateSize = (batch, chosen, compression) => estimatePdfSize(batch, chosen, compression, deps.codec);
   if (options.interactive) {
     deps.progress?.clear();
     if (!deps.interact) throw new CliError("Interactive mode needs a terminal.");
-    session = await deps.interact(session, deps.presets);
+    session = await deps.interact(session, deps.presets, estimate);
     adjustments = session.adjustments;
   }
 
@@ -118,7 +136,7 @@ const bind = async (options: BindOptions, deps: CliDeps) => {
   await eachInOrder(
     session.batch,
     PARALLEL_PAGES,
-    (image) => adjustImage(image, adjustments, deps.codec, { maxSize: options.maxSize, quality: options.quality }),
+    (image) => adjustImage(image, adjustments, deps.codec, session.compression),
     async (page, index) => {
       deps.progress?.show(`Adjusting page ${index + 1}/${pages}…`);
       await builder.addPage(page);
@@ -130,6 +148,15 @@ const bind = async (options: BindOptions, deps: CliDeps) => {
   await deps.writeFile(session.output, pdf);
   deps.progress?.clear();
   deps.out(`Wrote ${session.output} (${pages} ${pages === 1 ? "page" : "pages"}).`);
+
+  // Interactive mode already offered compression; flags mean the user chose a size.
+  const uncompressed = session.compression.maxSize === undefined && session.compression.quality === undefined;
+  if (!options.interactive && uncompressed && pdf.length > (deps.largePdfBytes ?? LARGE_PDF_BYTES)) {
+    deps.progress?.show("Estimating a smaller size…");
+    const tip = sizeTip(session.output, pdf.length, await estimate(session.batch, adjustments, SMALLER));
+    deps.progress?.clear();
+    if (tip) deps.err(tip);
+  }
 
   if (options.savePreset !== undefined) {
     deps.presets.store(savePreset(deps.presets.load(), options.savePreset, adjustments));
