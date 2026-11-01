@@ -1,6 +1,8 @@
-import { adjustImage } from "../application/adjust-image";
-import { buildPdf, type PageSize } from "../application/build-pdf";
+import type { PageSize } from "../application/build-pdf";
+import { compressionChoices, formatBytes } from "../application/compression";
+import { estimatePdfSize } from "../application/estimate-size";
 import { loadImage, UnsupportedImageError } from "../application/load-image";
+import { makePdf } from "../application/make-pdf";
 import { NEUTRAL, toCssFilter, type Adjustments } from "../domain/adjustments";
 import { addImages, moveImage, removeImage, sortByDate, type BatchImage } from "../domain/batch";
 import { canvasCodec } from "../infrastructure/browser/canvas-codec";
@@ -18,6 +20,10 @@ const readImage = async (file: File) =>
     canvasCodec,
   );
 
+/** Waits for edits to settle before estimating, since each estimate decodes a few photos. */
+const ESTIMATE_DELAY_MS = 400;
+const COMPRESSIONS = compressionChoices({});
+
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
 
 export const mountApp = (doc: Document) => {
@@ -33,6 +39,7 @@ export const mountApp = (doc: Document) => {
   const clear = $<HTMLButtonElement>("clear");
   const sortDate = $<HTMLButtonElement>("sort-by-date");
   const pageSize = $<HTMLSelectElement>("page-size");
+  const pdfSize = $<HTMLSelectElement>("pdf-size");
   const adjustPanel = $<HTMLElement>("adjust");
 
   let batch: BatchImage[] = [];
@@ -40,9 +47,51 @@ export const mountApp = (doc: Document) => {
   let draggedId: string | null = null;
   let adjustments: Adjustments = NEUTRAL;
 
+  pdfSize.replaceChildren(
+    ...COMPRESSIONS.map((choice, i) => {
+      const option = doc.createElement("option");
+      option.value = String(i);
+      option.title = choice.description;
+      return option;
+    }),
+  );
+  /** A size per choice: bytes, null while estimating, or NaN when it couldn't be estimated. */
+  const showSizes = (sizes: readonly (number | null)[]) =>
+    COMPRESSIONS.forEach((choice, i) => {
+      const size = sizes[i];
+      const detail = size === null ? " (estimating…)" : Number.isNaN(size) ? "" : ` (about ${formatBytes(size)})`;
+      pdfSize.options[i].textContent = `${choice.name}${detail}`;
+    });
+  showSizes(COMPRESSIONS.map(() => null));
+
+  // Each new batch or look starts a fresh estimate; results from an older one are dropped.
+  let estimateRun = 0;
+  let estimateTimer: ReturnType<typeof setTimeout> | undefined;
+  const scheduleEstimate = () => {
+    const run = ++estimateRun;
+    clearTimeout(estimateTimer);
+    if (batch.length === 0) return;
+    showSizes(COMPRESSIONS.map(() => null));
+    estimateTimer = setTimeout(async () => {
+      const sizes: (number | null)[] = COMPRESSIONS.map(() => null);
+      for (const [i, choice] of COMPRESSIONS.entries()) {
+        try {
+          sizes[i] = await estimatePdfSize(batch, adjustments, choice.value, canvasCodec);
+        } catch {
+          // A photo the browser can't re-encode: the download reports it.
+          if (run === estimateRun) showSizes(sizes.map((size) => size ?? Number.NaN));
+          return;
+        }
+        if (run !== estimateRun) return;
+        showSizes(sizes);
+      }
+    }, ESTIMATE_DELAY_MS);
+  };
+
   mountAdjustmentsPanel(doc, (next) => {
     adjustments = next;
     pages.style.setProperty("--adjust", toCssFilter(adjustments));
+    scheduleEstimate();
   });
 
   const previewFor = (image: BatchImage) => {
@@ -69,6 +118,7 @@ export const mountApp = (doc: Document) => {
     }
     batch = next;
     render();
+    scheduleEstimate();
   };
 
   const pageButton = (label: string, action: string, disabled = false) => {
@@ -217,8 +267,15 @@ export const mountApp = (doc: Document) => {
     download.disabled = true;
     download.textContent = "Building PDF…";
     try {
-      const adjusted = await Promise.all(batch.map((image) => adjustImage(image, adjustments, canvasCodec)));
-      const bytes = await buildPdf(adjusted, { pageSize: pageSize.value as PageSize });
+      const compression = COMPRESSIONS[Number(pdfSize.value)].value;
+      const bytes = await makePdf(
+        batch,
+        { adjustments, compression, pageSize: pageSize.value as PageSize },
+        canvasCodec,
+        (done, total) => {
+          download.textContent = `Building PDF… ${done}/${total}`;
+        },
+      );
       const url = URL.createObjectURL(
         new Blob([bytes as Uint8Array<ArrayBuffer>], { type: "application/pdf" }),
       );
