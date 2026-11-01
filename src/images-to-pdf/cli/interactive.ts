@@ -8,7 +8,7 @@ import { withPdfExtension } from "./args";
 import { describeAdjustments } from "./presets";
 import { reorderPrompt } from "./reorder";
 import { CancelledError, type EstimateSize, type Session } from "./run";
-import { compressionChoices, formatBytes, sameCompression } from "./size";
+import { compressionChoices, formatBytes, sameCompression } from "../application/compression";
 
 const CUSTOM = "";
 const LABELS: Record<keyof Adjustments, string> = {

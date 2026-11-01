@@ -1,19 +1,17 @@
-import { adjustImage, type OutputOptions } from "../application/adjust-image";
-import { createPdfBuilder, type PageSize } from "../application/build-pdf";
+import type { OutputOptions } from "../application/adjust-image";
+import type { PageSize } from "../application/build-pdf";
 import { estimatePdfSize } from "../application/estimate-size";
+import { makePdf } from "../application/make-pdf";
 import { loadImage, UnsupportedImageError, type ImageSource } from "../application/load-image";
 import type { ImageCodec, PresetStore } from "../application/ports";
 import { NEUTRAL, type Adjustments } from "../domain/adjustments";
 import { sortByDate, type BatchImage } from "../domain/batch";
 import { BUILT_IN_PRESETS, deletePreset, InvalidPresetNameError, savePreset, type Preset } from "../domain/presets";
 import { HELP, parseCliArgs, UsageError, type BindOptions, type Order } from "./args";
-import { eachInOrder } from "./each-in-order";
 import { describeAdjustments, findPreset, isBuiltIn, presetSlug } from "./presets";
 import type { Progress } from "./progress";
-import { LARGE_PDF_BYTES, SMALLER, sizeTip } from "./size";
-
-/** Pages adjusted at once: sharp works on libuv's 4 threads by default, and each page in flight holds its pixels. */
-const PARALLEL_PAGES = 4;
+import { SMALLER } from "../application/compression";
+import { LARGE_PDF_BYTES, sizeTip } from "./size";
 
 /** What interactive mode can change before the PDF is built. */
 export interface Session {
@@ -130,20 +128,16 @@ const bind = async (options: BindOptions, deps: CliDeps) => {
     adjustments = session.adjustments;
   }
 
-  // Each adjusted page goes into the PDF as soon as it is ready, so adjusted copies don't pile up.
-  const builder = await createPdfBuilder({ pageSize: session.pageSize });
   const pages = session.batch.length;
-  await eachInOrder(
+  const pdf = await makePdf(
     session.batch,
-    PARALLEL_PAGES,
-    (image) => adjustImage(image, adjustments, deps.codec, session.compression),
-    async (page, index) => {
-      deps.progress?.show(`Adjusting page ${index + 1}/${pages}…`);
-      await builder.addPage(page);
+    { adjustments, compression: session.compression, pageSize: session.pageSize },
+    deps.codec,
+    (done, total) => {
+      deps.progress?.show(`Adjusting page ${done}/${total}…`);
+      if (done === total) deps.progress?.show("Building the PDF…");
     },
   );
-  deps.progress?.show("Building the PDF…");
-  const pdf = await builder.save();
   deps.progress?.show(`Writing ${session.output}…`);
   await deps.writeFile(session.output, pdf);
   deps.progress?.clear();

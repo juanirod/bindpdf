@@ -12,6 +12,7 @@ Made for photos of book pages and documents: put them in order, give them all th
 | Page order | Drag pages to reorder them, or use the arrow buttons (keyboard friendly). |
 | Sort by date | Orders pages by when each photo was taken (EXIF), falling back to the file's date. |
 | Page size | Keep each image's size, or use A4 or Letter pages that turn to match each photo. |
+| PDF size | Keep photos as they are, or make the PDF smaller or smallest, with an estimate of how much each choice weighs. |
 | Adjustments | Brightness, contrast and saturation for the whole batch, with a live preview. |
 | Presets | Built-in "Scanned" looks, plus your own presets saved in the browser. |
 
