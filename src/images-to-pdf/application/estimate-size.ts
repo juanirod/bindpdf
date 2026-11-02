@@ -12,7 +12,7 @@ const sampleIndexes = (length: number, count: number) => {
 };
 
 /**
- * Estimates the PDF's size in bytes. Images that go in as they are add up exactly; otherwise a few
+ * Estimates the PDF's size in bytes. PDFs and images that go in as they are add up exactly; otherwise a few
  * images spread over the batch are processed and the rest are assumed to shrink by the same ratio.
  */
 export const estimatePdfSize = async (
@@ -21,16 +21,19 @@ export const estimatePdfSize = async (
   output: OutputOptions,
   codec: ImageCodec,
 ): Promise<number> => {
-  const total = batch.reduce((sum, image) => sum + image.bytes.length, 0);
+  const bytesOf = (items: readonly BatchImage[]) => items.reduce((sum, item) => sum + item.bytes.length, 0);
+  const images = batch.filter((item) => item.format !== "pdf");
+  const pdfs = bytesOf(batch) - bytesOf(images);
+  const total = bytesOf(images);
   const unchanged = isNeutral(adjustments) && output.maxSize === undefined && output.quality === undefined;
-  if (unchanged || batch.length === 0) return total;
+  if (unchanged || images.length === 0) return pdfs + total;
 
   let before = 0;
   let after = 0;
-  for (const index of sampleIndexes(batch.length, SAMPLES)) {
-    const image = batch[index];
+  for (const index of sampleIndexes(images.length, SAMPLES)) {
+    const image = images[index];
     before += image.bytes.length;
     after += (await adjustImage(image, adjustments, codec, output)).bytes.length;
   }
-  return before === 0 ? 0 : Math.round(total * (after / before));
+  return pdfs + (before === 0 ? 0 : Math.round(total * (after / before)));
 };

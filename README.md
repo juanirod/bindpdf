@@ -9,6 +9,7 @@ Made for photos of book pages and documents: put them in order, give them all th
 | Feature | What it does |
 |---------|--------------|
 | Batch upload | Drop many images at once, or pick them from a file dialog. JPG, PNG, WebP and GIF work. |
+| Existing PDFs | Add PDFs next to the images: each one moves as one block and its pages go in as they are. |
 | Page order | Drag pages to reorder them, or use the arrow buttons (keyboard friendly). |
 | Sort by date | Orders pages by when each photo was taken (EXIF), falling back to the file's date. |
 | Page size | Keep each image's size, or use A4 or Letter pages that turn to match each photo. |
@@ -60,14 +61,15 @@ npm link
 bindpdf *.jpg --sort date --preset scanned-black-white -o book.pdf
 bindpdf cover.png page-*.jpg --brightness 110 --contrast 130
 bindpdf a.jpg b.jpg c.jpg --order 3,1,2
+bindpdf cover.jpg contract.pdf scans/*.jpg -o all.pdf
 bindpdf *.jpg --max-size 1600 --quality 75 -o smaller.pdf
 bindpdf -i *.jpg
 ```
 
 | Option | What it does |
 |--------|--------------|
-| `-s, --sort date` | Sort by when each photo was taken (EXIF, else the file's date) |
-| `--order <list>` | Manual order of the listed images, e.g. `3,1,2` |
+| `-s, --sort date` | Sort by when each photo was taken (EXIF) or PDF created, else the file's date |
+| `--order <list>` | Manual order of the listed files, e.g. `3,1,2` |
 | `-p, --preset <name>` | Start from a preset, by name or id (see `--list-presets`) |
 | `-b, --brightness <n>` | 50 to 150, 100 leaves the image unchanged |
 | `-c, --contrast <n>` | 50 to 200, 100 leaves the image unchanged |
@@ -81,11 +83,13 @@ bindpdf -i *.jpg
 | `--list-presets` | List built-in and saved presets |
 | `--delete-preset <name>` | Delete a saved preset |
 
-Without `--sort` or `--order`, pages follow the order you list the images in.
+Without `--sort` or `--order`, pages follow the order you list the files in.
+
+**PDFs** can be listed next to images. Each one moves as one block with all its pages, which go into the new PDF as they are: adjustments, presets, `--max-size`, `--quality` and `--page-size` don't change them. Password-protected or damaged PDFs are skipped with a warning, like files that aren't images.
 
 Without adjustments, `--max-size` or `--quality`, photos go into the PDF exactly as they are, which is fastest but keeps their full size. For phone photos of documents, `--max-size 1600 --quality 75` usually makes the PDF around ten times smaller. When a PDF built without these options is larger than 20 MB, `bindpdf` prints a tip on stderr with the size it would have with them.
 
-**Interactive mode** lists the pages with their dates. Use ↑↓ to move, space to grab a page and drop it somewhere else, `s` to sort by date, `d` to remove a page and enter when you're done. Before the file name, it offers the PDF size (original, smaller or smallest) with an estimate of how much each one weighs. Flags you pass along with `-i` become the starting choices.
+**Interactive mode** lists the files with their dates (and page count, for PDFs). Use ↑↓ to move, space to grab a page and drop it somewhere else, `s` to sort by date, `d` to remove a page and enter when you're done. Before the file name, it offers the PDF size (original, smaller or smallest) with an estimate of how much each one weighs. Flags you pass along with `-i` become the starting choices.
 
 Saved presets live in `~/.config/bindpdf/presets.json` (or `$XDG_CONFIG_HOME/bindpdf/`). They are separate from the presets saved in the browser.
 

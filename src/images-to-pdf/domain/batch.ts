@@ -1,14 +1,31 @@
 /** Formats pdf-lib can embed natively. Anything else is converted before entering the batch. */
 export type ImageFormat = "png" | "jpg";
 
-export interface BatchImage {
+interface BatchFile {
   readonly id: string;
   readonly name: string;
   readonly bytes: Uint8Array<ArrayBuffer>;
-  readonly format: ImageFormat;
-  /** When the photo was taken (ms since epoch), or the file's last-modified time when unknown. */
+  /** When the photo was taken or the PDF created (ms since epoch), or the file's last-modified time when unknown. */
   readonly takenAt: number;
 }
+
+/** An image, which becomes one page. */
+export interface BatchPicture extends BatchFile {
+  readonly format: ImageFormat;
+}
+
+/** An existing PDF, whose pages go in as they are and move together. */
+export interface BatchPdf extends BatchFile {
+  readonly format: "pdf";
+  readonly pages: number;
+}
+
+/** One file of the batch: an image or a PDF. */
+export type BatchImage = BatchPicture | BatchPdf;
+
+/** Pages the batch adds to the PDF: one per image, all of each PDF's. */
+export const pageCount = (batch: readonly BatchImage[]): number =>
+  batch.reduce((sum, item) => sum + (item.format === "pdf" ? item.pages : 1), 0);
 
 /** Oldest first. Array.prototype.sort is stable, so images with the same date keep their order. */
 export const sortByDate = (batch: readonly BatchImage[]): BatchImage[] =>

@@ -1,14 +1,22 @@
 import type { PageSize } from "../application/build-pdf";
 import { compressionChoices, formatBytes } from "../application/compression";
 import { estimatePdfSize } from "../application/estimate-size";
-import { loadImage, UnsupportedImageError } from "../application/load-image";
+import { loadImage, UnreadablePdfError, UnsupportedImageError } from "../application/load-image";
 import { makePdf } from "../application/make-pdf";
 import { NEUTRAL, toCssFilter, type Adjustments } from "../domain/adjustments";
-import { addImages, moveImage, removeImage, sortByDate, type BatchImage } from "../domain/batch";
+import { addImages, moveImage, pageCount, removeImage, sortByDate, type BatchImage, type BatchPicture } from "../domain/batch";
 import { canvasCodec } from "../infrastructure/browser/canvas-codec";
 import { mountAdjustmentsPanel } from "./adjustments-panel";
+import { pdfLabel, skippedNotice } from "./labels";
 
 const MIME = { png: "image/png", jpg: "image/jpeg" } as const;
+
+/** A generic document glyph labeled PDF, the cover of a PDF's card. Static markup, no user data. */
+const PDF_LOGO = `<svg viewBox="0 0 48 60" aria-hidden="true">
+  <path d="M4 0h28l16 16v40a4 4 0 0 1-4 4H4a4 4 0 0 1-4-4V4a4 4 0 0 1 4-4z" fill="var(--pdf)" />
+  <path d="M32 0v12a4 4 0 0 0 4 4h12z" fill="#ffffff" opacity="0.45" />
+  <text x="24" y="45" text-anchor="middle" font-size="13" font-weight="800" fill="#ffffff">PDF</text>
+</svg>`;
 const readImage = async (file: File) =>
   loadImage(
     {
@@ -94,7 +102,7 @@ export const mountApp = (doc: Document) => {
     scheduleEstimate();
   });
 
-  const previewFor = (image: BatchImage) => {
+  const previewFor = (image: BatchPicture) => {
     let url = previews.get(image.id);
     if (!url) {
       url = URL.createObjectURL(new Blob([image.bytes], { type: MIME[image.format] }));
@@ -141,10 +149,20 @@ export const mountApp = (doc: Document) => {
 
         const sheet = doc.createElement("div");
         sheet.className = "sheet";
-        const img = doc.createElement("img");
-        img.src = previewFor(image);
-        img.alt = image.name;
-        sheet.append(img);
+        if (image.format === "pdf") {
+          const cover = doc.createElement("div");
+          cover.className = "pdf-cover";
+          cover.innerHTML = PDF_LOGO;
+          const label = doc.createElement("span");
+          label.textContent = pdfLabel(image.pages);
+          cover.append(label);
+          sheet.append(cover);
+        } else {
+          const img = doc.createElement("img");
+          img.src = previewFor(image);
+          img.alt = image.name;
+          sheet.append(img);
+        }
 
         const meta = doc.createElement("div");
         meta.className = "meta";
@@ -154,7 +172,8 @@ export const mountApp = (doc: Document) => {
         const name = doc.createElement("span");
         name.className = "name";
         name.textContent = image.name;
-        name.title = `${image.name}\n${dateFormat.format(image.takenAt)}`;
+        const detail = image.format === "pdf" ? `${pdfLabel(image.pages)}\n` : "";
+        name.title = `${image.name}\n${detail}${dateFormat.format(image.takenAt)}`;
 
         const tools = doc.createElement("div");
         tools.className = "tools";
@@ -177,25 +196,26 @@ export const mountApp = (doc: Document) => {
     actions.hidden = empty;
     adjustPanel.hidden = empty;
     dropzone.classList.toggle("compact", !empty);
-    count.textContent = `${batch.length} ${batch.length === 1 ? "page" : "pages"}`;
+    const total = pageCount(batch);
+    count.textContent = `${total} ${total === 1 ? "page" : "pages"}`;
   };
 
   const addFiles = async (files: Iterable<File>) => {
     const images: BatchImage[] = [];
-    const skipped: string[] = [];
+    const skipped = { images: [] as string[], protectedPdfs: [] as string[], damagedPdfs: [] as string[] };
     for (const file of files) {
       try {
         images.push(await readImage(file));
       } catch (error) {
+        if (error instanceof UnreadablePdfError) {
+          (error.reason === "protected" ? skipped.protectedPdfs : skipped.damagedPdfs).push(error.fileName);
+          continue;
+        }
         if (!(error instanceof UnsupportedImageError)) throw error;
-        skipped.push(error.fileName);
+        skipped.images.push(error.fileName);
       }
     }
-    showNotice(
-      skipped.length
-        ? `Skipped ${skipped.join(", ")}: this browser can't open that format. Convert it to JPG or PNG and add it again.`
-        : null,
-    );
+    showNotice(skippedNotice(skipped));
     setBatch(addImages(batch, images));
   };
 

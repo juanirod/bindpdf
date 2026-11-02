@@ -67,3 +67,15 @@ describe("adjustImage", () => {
     ]);
   });
 });
+
+describe("adjustImage with a PDF", () => {
+  it("returns the PDF as it is, ignoring adjustments, size and quality", async () => {
+    const pdf: BatchImage = { id: "p", name: "p.pdf", bytes: new Uint8Array([0x25]), format: "pdf", pages: 2, takenAt: 0 };
+    const codec: ImageCodec = {
+      decode: () => Promise.reject(new Error("should not decode")),
+      encode: () => Promise.reject(new Error("should not encode")),
+    };
+    const adjusted = { ...NEUTRAL, contrast: 150 };
+    await expect(adjustImage(pdf, adjusted, codec, { maxSize: 100, quality: 50 })).resolves.toBe(pdf);
+  });
+});
