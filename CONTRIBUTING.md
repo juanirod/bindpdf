@@ -35,6 +35,8 @@ Brand assets (logo, mark, favicons and the terminal banners) live in `docs/brand
 
 Before opening a PR, make sure `npm test`, `npm run build` and `npm run build:cli` pass. CI runs them on every pull request, on Node 20, 22 and 24.
 
+Tests run in Node. Web app tests (`src/images-to-pdf/ui/*.test.ts` that touch the page) start with `// @vitest-environment happy-dom`, mount the app on the real `index.html` and use it through its buttons and file input; see `ui/app.test.ts`. The browser canvas isn't available there, so keep those tests to files that need no re-encoding (upright JPEGs, PNGs and PDFs).
+
 Add user-facing changes to the `Unreleased` section of [CHANGELOG.md](CHANGELOG.md) in the same PR.
 
 `main` can't be force-pushed or deleted, and merged branches are deleted automatically.
