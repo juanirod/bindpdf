@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addImages, moveImage, removeImage, sortByDate, type BatchImage } from "./batch";
+import { addImages, moveImage, pageCount, removeImage, sortByDate, type BatchImage } from "./batch";
 
 const image = (id: string, takenAt = 0): BatchImage => ({
   id,
@@ -47,5 +47,13 @@ describe("batch", () => {
     const batch = [image("noon", 1200), image("dawn", 600), image("tie-a", 900), image("tie-b", 900)];
     expect(ids(sortByDate(batch))).toEqual(["dawn", "tie-a", "tie-b", "noon"]);
     expect(ids(batch)).toEqual(["noon", "dawn", "tie-a", "tie-b"]);
+  });
+});
+
+describe("pageCount", () => {
+  it("counts one page per image and every page of each PDF", () => {
+    const pdf: BatchImage = { id: "p", name: "p.pdf", bytes: new Uint8Array(), format: "pdf", pages: 5, takenAt: 0 };
+    expect(pageCount([image("a"), pdf, image("b")])).toBe(7);
+    expect(pageCount([])).toBe(0);
   });
 });

@@ -3,6 +3,7 @@ import { PDFDocument } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 import type { BatchImage } from "../domain/batch";
 import { buildPdf, createPdfBuilder, EmptyBatchError, fitImage } from "./build-pdf";
+import { makePdfFixture } from "./pdf-fixture";
 
 // Builds a valid grayscale PNG of the given size, so fixtures stay readable.
 const makePng = (width: number, height: number): Uint8Array<ArrayBuffer> => {
@@ -104,5 +105,33 @@ describe("fitImage", () => {
       width: 150,
       height: 300,
     });
+  });
+});
+
+describe("buildPdf with PDFs", () => {
+  const pdf = async (id: string, sizes: readonly (readonly [number, number])[]): Promise<BatchImage> => ({
+    id,
+    name: `${id}.pdf`,
+    bytes: await makePdfFixture(sizes),
+    format: "pdf",
+    pages: sizes.length,
+    takenAt: 0,
+  });
+
+  it("copies every page of each PDF in place, keeping their own sizes even on paper sizes", async () => {
+    const batch = [png("cover", 2, 1), await pdf("contract", [[300, 400], [500, 200]]), png("end", 1, 1)];
+    const built = await PDFDocument.load(await buildPdf(batch, { pageSize: "a4" }));
+    const sizes = built.getPages().map((page) => page.getSize());
+    expect(sizes).toEqual([
+      { width: 841.89, height: 595.28 },
+      { width: 300, height: 400 },
+      { width: 500, height: 200 },
+      { width: 595.28, height: 841.89 },
+    ]);
+  });
+
+  it("builds a PDF from PDFs alone", async () => {
+    const built = await PDFDocument.load(await buildPdf([await pdf("a", [[100, 100]]), await pdf("b", [[200, 100]])]));
+    expect(built.getPageCount()).toBe(2);
   });
 });

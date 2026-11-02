@@ -53,3 +53,25 @@ describe("estimatePdfSize", () => {
     await expect(estimatePdfSize([], NEUTRAL, { quality: 50 }, failingCodec)).resolves.toBe(0);
   });
 });
+
+describe("estimatePdfSize with PDFs", () => {
+  const pdf = (id: string, size: number): BatchImage => ({
+    id,
+    name: `${id}.pdf`,
+    bytes: new Uint8Array(size),
+    format: "pdf",
+    pages: 1,
+    takenAt: 0,
+  });
+
+  it("counts PDFs as they are and samples only the images", async () => {
+    const seen: number[] = [];
+    const batch = [pdf("p", 1000), jpg("a", 40), jpg("b", 80)];
+    await expect(estimatePdfSize(batch, NEUTRAL, { quality: 50 }, quarterCodec(seen))).resolves.toBe(1030);
+    expect(seen).toEqual([40, 80]);
+  });
+
+  it("counts a batch of only PDFs as they are, without decoding", async () => {
+    await expect(estimatePdfSize([pdf("p", 500)], NEUTRAL, { quality: 50 }, failingCodec)).resolves.toBe(500);
+  });
+});

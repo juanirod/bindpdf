@@ -9,7 +9,7 @@ const MIME = { png: "image/png", jpg: "image/jpeg" } as const;
 
 /**
  * Returns a copy of the image with the adjustments baked into its pixels, keeping its format,
- * shrunk to `maxSize` and encoded at `quality` when given.
+ * shrunk to `maxSize` and encoded at `quality` when given. PDFs are returned as they are.
  */
 export const adjustImage = async (
   image: BatchImage,
@@ -17,6 +17,7 @@ export const adjustImage = async (
   codec: ImageCodec,
   { maxSize, quality }: OutputOptions = {},
 ): Promise<BatchImage> => {
+  if (image.format === "pdf") return image;
   if (isNeutral(adjustments) && maxSize === undefined && quality === undefined) return image;
 
   // Shrinking while decoding means fewer pixels to adjust and encode.

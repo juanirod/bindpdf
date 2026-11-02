@@ -1,7 +1,8 @@
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import type { ImageCodec, RawImage } from "./ports";
-import { loadImage, UnsupportedImageError } from "./load-image";
+import { loadImage, UnreadablePdfError, UnsupportedImageError } from "./load-image";
+import { makePdfFixture } from "./pdf-fixture";
 
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 2]);
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0]);
@@ -89,5 +90,47 @@ describe("loadImage", () => {
     const source = { name: "a.png", bytes: PNG, lastModified: 0 };
     const [a, b] = await Promise.all([loadImage(source, fakeCodec()), loadImage(source, fakeCodec())]);
     expect(a.id).not.toBe(b.id);
+  });
+});
+
+describe("loadImage with a PDF", () => {
+  const failingCodec: ImageCodec = {
+    decode: () => Promise.reject(new Error("should not decode")),
+    encode: () => Promise.reject(new Error("should not encode")),
+  };
+
+  it("keeps the PDF bytes, counts its pages and dates it by its creation date", async () => {
+    const bytes = await makePdfFixture([[100, 100], [100, 100], [200, 100]], { createdAt: new Date(Date.UTC(2020, 0, 2)) });
+    const item = await loadImage({ name: "contract.pdf", bytes, lastModified: 42 }, failingCodec);
+    expect(item).toMatchObject({ name: "contract.pdf", format: "pdf", bytes, pages: 3, takenAt: Date.UTC(2020, 0, 2) });
+    expect(item.id).toEqual(expect.any(String));
+  });
+
+  it("falls back to the file date when the PDF has no creation date", async () => {
+    const bytes = await makePdfFixture([[100, 100]], { createdAt: null });
+    await expect(loadImage({ name: "a.pdf", bytes, lastModified: 42 }, failingCodec)).resolves.toMatchObject({
+      takenAt: 42,
+    });
+  });
+
+  it("detects a PDF from its bytes, not its name", async () => {
+    const bytes = await makePdfFixture([[100, 100]]);
+    await expect(loadImage({ name: "scan", bytes, lastModified: 0 }, failingCodec)).resolves.toMatchObject({
+      format: "pdf",
+    });
+  });
+
+  it("rejects a password-protected PDF with UnreadablePdfError naming the file", async () => {
+    const bytes = await makePdfFixture([[100, 100]], { encrypted: true });
+    const error = await loadImage({ name: "secret.pdf", bytes, lastModified: 0 }, failingCodec).catch((e) => e);
+    expect(error).toBeInstanceOf(UnreadablePdfError);
+    expect(error).toMatchObject({ fileName: "secret.pdf", reason: "protected" });
+  });
+
+  it("rejects a damaged PDF with UnreadablePdfError naming the file", async () => {
+    const bytes = new Uint8Array(new TextEncoder().encode("%PDF-1.7\nnot really a pdf"));
+    const error = await loadImage({ name: "broken.pdf", bytes, lastModified: 0 }, failingCodec).catch((e) => e);
+    expect(error).toBeInstanceOf(UnreadablePdfError);
+    expect(error).toMatchObject({ fileName: "broken.pdf", reason: "damaged" });
   });
 });

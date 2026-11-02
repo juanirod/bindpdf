@@ -8,7 +8,7 @@ import { addImages, moveImage, removeImage, sortByDate, type BatchImage } from "
 import { canvasCodec } from "../infrastructure/browser/canvas-codec";
 import { mountAdjustmentsPanel } from "./adjustments-panel";
 
-const MIME = { png: "image/png", jpg: "image/jpeg" } as const;
+const MIME = { png: "image/png", jpg: "image/jpeg", pdf: "application/pdf" } as const;
 const readImage = async (file: File) =>
   loadImage(
     {
