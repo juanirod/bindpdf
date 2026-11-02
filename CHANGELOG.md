@@ -4,6 +4,10 @@ Notable changes to BindPDF: the web app and the `bindpdf` command line. The form
 
 ## [Unreleased]
 
+### Added
+
+- Turn single images or whole PDFs clockwise by 90, 180 or 270 degrees: `--rotate 2:90,4:270` in the CLI, the `r` key in interactive mode, and a ⟳ button on each card in the web app. Pages turn through the PDF's own page rotation, so photos aren't re-encoded and keep their quality and size; a PDF's pages add the turn to the rotation they already have.
+
 ## [0.2.0] - 2026-11-01
 
 ### Added
