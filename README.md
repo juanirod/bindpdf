@@ -51,6 +51,7 @@ bindpdf cover.png page-*.jpg --brightness 110 --contrast 130
 bindpdf a.jpg b.jpg c.jpg --order 3,1,2
 bindpdf cover.jpg contract.pdf scans/*.jpg -o all.pdf
 bindpdf page-*.jpg --rotate 2:90,4:270
+bindpdf contract.pdf photo.jpg contract.pdf --pages 1:1-2 --pages 3:3-5
 bindpdf *.jpg --max-size 1600 --quality 75 -o smaller.pdf
 bindpdf -i *.jpg
 ```
@@ -59,6 +60,7 @@ bindpdf -i *.jpg
 |--------|--------------|
 | `-s, --sort date` | Sort by when each photo was taken (EXIF) or PDF created, else the file's date |
 | `--order <list>` | Manual order of the listed files, e.g. `3,1,2` |
+| `--pages <pick>` | Pages a listed PDF adds, in order, e.g. `2:1-3,7` or `2:3,1,2`; repeat it for more PDFs |
 | `--rotate <list>` | Turn listed files clockwise by 90, 180 or 270, e.g. `3:90,5:270` (positions as listed, like `--order`) |
 | `-p, --preset <name>` | Start from a preset, by name or id (see `--list-presets`) |
 | `-b, --brightness <n>` | 50 to 150, 100 leaves the image unchanged |
@@ -79,9 +81,11 @@ Without `--sort` or `--order`, pages follow the order you list the files in.
 
 `--rotate` and the `r` key turn pages through the PDF's own page rotation, so photos aren't re-encoded and keep their quality and size. A PDF turns as a whole, adding to the rotation its pages already have.
 
+`--pages` picks which pages of a listed PDF go in, and in what order. List the same PDF twice with a `--pages` for each to put other files between its pages; asking for a page the PDF doesn't have is a usage error.
+
 Without adjustments, `--max-size` or `--quality`, photos go into the PDF exactly as they are, which is fastest but keeps their full size. For phone photos of documents, `--max-size 1600 --quality 75` usually makes the PDF around ten times smaller. When a PDF built without these options is larger than 20 MB, `bindpdf` prints a tip on stderr with the size it would have with them.
 
-**Interactive mode** lists the files with their dates (and page count, for PDFs). Use ↑↓ to move, space to grab a page and drop it somewhere else, `r` to rotate it 90° clockwise, `s` to sort by date, `d` to remove a page and enter when you're done. Before the file name, it offers the PDF size (original, smaller or smallest) with an estimate of how much each one weighs. Flags you pass along with `-i` become the starting choices.
+**Interactive mode** lists the files with their dates (and page count, for PDFs). Use ↑↓ to move, space to grab a page and drop it somewhere else, `r` to rotate it 90° clockwise, `e` to split a PDF into its pages, `s` to sort by date, `d` to remove a page and enter when you're done. Before the file name, it offers the PDF size (original, smaller or smallest) with an estimate of how much each one weighs. Flags you pass along with `-i` become the starting choices.
 
 Saved presets live in `~/.config/bindpdf/presets.json` (or `$XDG_CONFIG_HOME/bindpdf/`). They are separate from the presets saved in the browser.
 

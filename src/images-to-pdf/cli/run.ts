@@ -86,7 +86,10 @@ const readSource = async (path: string, deps: CliDeps) => {
 
 interface Listed {
   readonly file: string;
+  /** 1-based, as the user listed it, for error messages. */
+  readonly position: number;
   readonly rotation?: Rotation;
+  readonly pages?: readonly number[];
 }
 
 /**
@@ -94,11 +97,26 @@ interface Listed {
  * still have a slot.
  */
 const listedFiles = (options: BindOptions): Listed[] => {
-  const listed = options.files.map((file, position) => {
-    const rotation = options.rotations?.get(position);
-    return rotation === undefined ? { file } : { file, rotation };
+  const listed = options.files.map((file, index): Listed => {
+    const rotation = options.rotations?.get(index);
+    const pages = options.pages?.get(index);
+    return {
+      file,
+      position: index + 1,
+      ...(rotation !== undefined && { rotation }),
+      ...(pages !== undefined && { pages }),
+    };
   });
   return options.order.kind === "manual" ? options.order.positions.map((position) => listed[position]) : listed;
+};
+
+/** Applies a --pages pick to a loaded file; only PDFs have pages to pick, and only the ones they have. */
+const pickPages = (item: BatchImage, pages: readonly number[], position: number): BatchImage => {
+  if (item.format !== "pdf") throw new UsageError(`--pages ${position}: ${item.name} isn't a PDF.`);
+  if (pages.some((page) => page >= item.pages)) {
+    throw new UsageError(`--pages ${position}: ${item.name} has ${item.pages} ${item.pages === 1 ? "page" : "pages"}.`);
+  }
+  return { ...item, pageIndexes: pages };
 };
 
 const loadBatch = async (files: readonly Listed[], deps: CliDeps): Promise<BatchImage[]> => {
@@ -109,8 +127,9 @@ const loadBatch = async (files: readonly Listed[], deps: CliDeps): Promise<Batch
   for (const [index, source] of sources.entries()) {
     deps.progress?.show(`Reading images ${index + 1}/${sources.length}…`);
     try {
-      const item = await loadImage(source, deps.codec);
-      const { rotation } = files[index];
+      const loaded = await loadImage(source, deps.codec);
+      const { rotation, pages, position } = files[index];
+      const item = pages === undefined ? loaded : pickPages(loaded, pages, position);
       batch.push(rotation === undefined ? item : { ...item, rotation });
     } catch (error) {
       if (error instanceof UnreadablePdfError) {

@@ -12,6 +12,8 @@ export type Order =
 export interface BindOptions {
   readonly files: readonly string[];
   readonly order: Order;
+  /** Picked 0-based PDF pages, in order, by 0-based position of the listed files; only present with --pages. */
+  readonly pages?: ReadonlyMap<number, readonly number[]>;
   /** Clockwise turns by 0-based position of the listed files; only present with --rotate. */
   readonly rotations?: ReadonlyMap<number, Rotation>;
   /** Preset to start from, by name or slug. */
@@ -51,6 +53,9 @@ Order:
   -s, --sort date            Sort by when each photo was taken or PDF created, else the file's date
       --order <list>         Manual order of the listed files, e.g. 3,1,2
 
+PDF pages:
+      --pages <pick>         Pages a listed PDF adds, in order, e.g. 2:1-3,7 (repeat for more PDFs)
+
 Rotation:
       --rotate <list>        Turn listed files clockwise by 90, 180 or 270, e.g. 3:90,5:270
 
@@ -79,6 +84,7 @@ Examples:
   bindpdf cover.png page-*.jpg --brightness 110 --contrast 130
   bindpdf cover.jpg contract.pdf scans/*.jpg -o all.pdf
   bindpdf page-*.jpg --rotate 2:90,4:270
+  bindpdf contract.pdf photo.jpg contract.pdf --pages 1:1-2 --pages 3:3-5
   bindpdf *.jpg --max-size 1600 --quality 75 -o smaller.pdf
   bindpdf -i *.jpg
 `;
@@ -137,6 +143,36 @@ const parseRotations = (raw: string, count: number): ReadonlyMap<number, Rotatio
   return rotations;
 };
 
+/** "1-3,7" as 0-based pages, in order; null when any part isn't a page number or an ascending range. */
+const pageList = (spec: string): number[] | null => {
+  const pages: number[] = [];
+  for (const part of spec.split(",")) {
+    const match = /^(\d+)(?:-(\d+))?$/.exec(part.trim());
+    const from = Number(match?.[1]);
+    const to = Number(match?.[2] ?? match?.[1]);
+    if (!match || from < 1 || to < from) return null;
+    for (let page = from; page <= to; page++) pages.push(page - 1);
+  }
+  return pages;
+};
+
+const parsePages = (raws: readonly string[], count: number): ReadonlyMap<number, readonly number[]> => {
+  const picks = new Map<number, readonly number[]>();
+  for (const raw of raws) {
+    const match = /^(\d+):(.+)$/.exec(raw.trim());
+    const position = Number(match?.[1]) - 1;
+    const pages = match ? pageList(match[2]) : null;
+    if (!match || !pages || position < 0 || position >= count) {
+      throw new UsageError(
+        `--pages must look like 2:1-3,7: a listed position from 1 to ${count} and page numbers or ranges.`,
+      );
+    }
+    if (picks.has(position)) throw new UsageError(`--pages lists position ${position + 1} twice.`);
+    picks.set(position, pages);
+  }
+  return picks;
+};
+
 export const withPdfExtension = (file: string) => (/\.pdf$/i.test(file) ? file : `${file}.pdf`);
 
 const parse = (argv: readonly string[]) => {
@@ -148,6 +184,7 @@ const parse = (argv: readonly string[]) => {
         sort: { type: "string", short: "s" },
         order: { type: "string" },
         rotate: { type: "string" },
+        pages: { type: "string", multiple: true },
         preset: { type: "string", short: "p" },
         brightness: { type: "string", short: "b" },
         contrast: { type: "string", short: "c" },
@@ -195,6 +232,7 @@ export const parseCliArgs = (argv: readonly string[]): CliCommand => {
     options: {
       files,
       order,
+      ...(values.pages !== undefined && { pages: parsePages(values.pages, files.length) }),
       ...(values.rotate !== undefined && { rotations: parseRotations(values.rotate, files.length) }),
       ...(values.preset !== undefined && { preset: values.preset }),
       adjustments: {

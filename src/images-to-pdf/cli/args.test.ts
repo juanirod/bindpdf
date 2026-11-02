@@ -46,6 +46,11 @@ describe("parseCliArgs", () => {
     expect(command).toMatchObject({ options: { rotations: new Map([[2, 90], [0, 270]]) } });
   });
 
+  it("reads repeated --pages as 0-based pages by 0-based listed position", () => {
+    const command = parseCliArgs(["--pages", "1:1-3, 7", "--pages", "3:3,1,3", "a.pdf", "b.jpg", "a.pdf"]);
+    expect(command).toMatchObject({ options: { pages: new Map([[0, [0, 1, 2, 6]], [2, [2, 0, 2]]]) } });
+  });
+
   it("reads a manual order as 0-based positions", () => {
     const command = parseCliArgs(["--order", "3, 1,2", "a", "b", "c"]);
     expect(command).toMatchObject({ options: { order: { kind: "manual", positions: [2, 0, 1] } } });
@@ -86,6 +91,12 @@ describe("parseCliArgs", () => {
     [["--rotate", "1:-90", "a", "b"], "--rotate must look like 3:90,5:270: a listed position from 1 to 2 and a turn of 90, 180 or 270."],
     [["--rotate", "1", "a", "b"], "--rotate must look like 3:90,5:270: a listed position from 1 to 2 and a turn of 90, 180 or 270."],
     [["--rotate", "1:90,1:180", "a", "b"], "--rotate lists position 1 twice."],
+    [["--pages", "3:1", "a", "b"], "--pages must look like 2:1-3,7: a listed position from 1 to 2 and page numbers or ranges."],
+    [["--pages", "1:0", "a", "b"], "--pages must look like 2:1-3,7: a listed position from 1 to 2 and page numbers or ranges."],
+    [["--pages", "1:3-1", "a", "b"], "--pages must look like 2:1-3,7: a listed position from 1 to 2 and page numbers or ranges."],
+    [["--pages", "1:", "a", "b"], "--pages must look like 2:1-3,7: a listed position from 1 to 2 and page numbers or ranges."],
+    [["--pages", "1-2", "a", "b"], "--pages must look like 2:1-3,7: a listed position from 1 to 2 and page numbers or ranges."],
+    [["--pages", "1:1", "--pages", "1:2", "a", "b"], "--pages lists position 1 twice."],
     [["--nope", "a"], "Unknown option '--nope'"],
   ])("rejects %j with a usage error", (argv, message) => {
     expect(() => parseCliArgs(argv)).toThrow(UsageError);

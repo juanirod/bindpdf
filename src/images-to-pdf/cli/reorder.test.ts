@@ -59,3 +59,15 @@ describe("reorder rotate", () => {
     expect(reorder(reorder(reorder(once, "rotate"), "rotate"), "rotate").pages[1].rotation).toBe(0);
   });
 });
+
+describe("reorder split", () => {
+  it("splits the PDF under the cursor into its pages, keeping the cursor on the first one", () => {
+    const pdf: BatchImage = { id: "p", name: "p.pdf", bytes: new Uint8Array(), format: "pdf", pages: 2, takenAt: 0 };
+    const start: ReorderState = { pages: [page("a", 1), pdf], cursor: 1, grabbed: false };
+    const next = reorder(start, "split");
+    expect(next.pages).toHaveLength(3);
+    expect(next.pages.slice(1).map((item) => (item.format === "pdf" ? item.pageIndexes : null))).toEqual([[0], [1]]);
+    expect(next.cursor).toBe(1);
+    expect(reorder(state(0), "split")).toEqual(state(0));
+  });
+});

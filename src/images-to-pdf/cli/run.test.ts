@@ -445,3 +445,32 @@ describe("runCli bind with --rotate", () => {
     expect(written.size).toBe(0);
   });
 });
+
+describe("runCli bind with --pages", () => {
+  it("interleaves pages of a PDF listed twice with other files", async () => {
+    const { deps, out, pageWidths } = setup();
+    expect(await runCli(["contract.pdf", "a.png", "contract.pdf", "--pages", "1:1", "--pages", "3:2"], deps)).toBe(0);
+    expect(await pageWidths()).toEqual([300, 10, 500]);
+    expect(out).toEqual(["Wrote images.pdf (3 pages)."]);
+  });
+
+  it("picks pages in the given order, repeats included, and still turns them", async () => {
+    const { deps, written, pageWidths } = setup();
+    expect(await runCli(["contract.pdf", "--pages", "1:2,1,2", "--rotate", "1:90"], deps)).toBe(0);
+    expect(await pageWidths()).toEqual([500, 300, 500]);
+    const pdf = await PDFDocument.load(written.get("images.pdf")!);
+    expect(pdf.getPages().map((page) => page.getRotation().angle)).toEqual([90, 90, 90]);
+  });
+
+  it("fails with exit code 2 for a page the PDF doesn't have, or a file that isn't a PDF", async () => {
+    const missing = setup();
+    expect(await runCli(["contract.pdf", "--pages", "1:3"], missing.deps)).toBe(2);
+    expect(missing.err).toEqual(["Error: --pages 1: contract.pdf has 2 pages."]);
+    expect(missing.written.size).toBe(0);
+
+    const image = setup();
+    expect(await runCli(["a.png", "contract.pdf", "--pages", "1:1"], image.deps)).toBe(2);
+    expect(image.err).toEqual(["Error: --pages 1: a.png isn't a PDF."]);
+    expect(image.written.size).toBe(0);
+  });
+});

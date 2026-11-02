@@ -4,6 +4,10 @@ Notable changes to BindPDF: the web app and the `bindpdf` command line. The form
 
 ## [Unreleased]
 
+### Added
+
+- Split a PDF into single pages that move, turn and go away like images: the "Split pages" button in the web app and the `e` key in interactive mode. In the CLI, `--pages 2:1-3,7` picks which pages of a listed PDF go in and in what order; list a PDF twice to put other files between its pages.
+
 ## [0.4.0] - 2026-11-02
 
 ### Added
