@@ -1,5 +1,5 @@
 import { degrees, PageSizes, PDFDocument, type PDFPage } from "pdf-lib";
-import type { BatchImage } from "../domain/batch";
+import { pickedPages, type BatchImage } from "../domain/batch";
 
 export type PageSize = "image" | "a4" | "letter";
 
@@ -62,8 +62,9 @@ export const createPdfBuilder = async ({ pageSize = "image" }: BuildPdfOptions =
     async addPage(image) {
       if (image.format === "pdf") {
         const source = await PDFDocument.load(image.bytes);
-        for (const page of await pdf.copyPages(source, source.getPageIndices())) turn(pdf.addPage(page), image.rotation);
-        pages += source.getPageCount();
+        const picked = image.pageIndexes ? pickedPages(image) : source.getPageIndices();
+        for (const page of await pdf.copyPages(source, [...picked])) turn(pdf.addPage(page), image.rotation);
+        pages += picked.length;
         return;
       }
       const embedded =

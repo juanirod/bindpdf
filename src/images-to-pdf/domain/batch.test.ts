@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addImages, moveImage, pageCount, removeImage, rotateImage, sortByDate, type BatchImage } from "./batch";
+import { addImages, moveImage, pageCount, removeImage, rotateImage, sortByDate, splitPdf, type BatchImage, type BatchPdf } from "./batch";
 
 const image = (id: string, takenAt = 0): BatchImage => ({
   id,
@@ -75,5 +75,54 @@ describe("rotateImage", () => {
     expect(rotateImage(batch, "zzz")).toEqual(batch);
     rotateImage(batch, "a");
     expect(batch[0].rotation).toBeUndefined();
+  });
+});
+
+describe("splitPdf", () => {
+  const pdf = (id: string, extra: Partial<BatchPdf> = {}): BatchPdf => ({
+    id,
+    name: `${id}.pdf`,
+    bytes: new Uint8Array(),
+    format: "pdf",
+    pages: 3,
+    takenAt: 5,
+    ...extra,
+  });
+  let next = 0;
+  const newId = () => `new${++next}`;
+
+  it("replaces a PDF with one item per page, in place, keeping its date and turn", () => {
+    next = 0;
+    const batch = splitPdf([image("a"), pdf("p", { rotation: 90 }), image("b")], "p", newId);
+    expect(ids(batch)).toEqual(["a", "new1", "new2", "new3", "b"]);
+    expect(batch.slice(1, 4)).toEqual([0, 1, 2].map((page, i) => ({ ...pdf("p", { rotation: 90 }), id: `new${i + 1}`, pageIndexes: [page] })));
+    expect(pageCount(batch)).toBe(5);
+  });
+
+  it("splits only the pages a PDF already picks, in its order", () => {
+    next = 0;
+    const batch = splitPdf([pdf("p", { pageIndexes: [2, 0] })], "p", newId);
+    expect(batch.map((item) => (item.format === "pdf" ? item.pageIndexes : null))).toEqual([[2], [0]]);
+  });
+
+  it("leaves images, single pages and unknown ids alone", () => {
+    const single = pdf("s", { pageIndexes: [1] });
+    const batch = [image("a"), single];
+    expect(splitPdf(batch, "a")).toEqual(batch);
+    expect(splitPdf(batch, "s")).toEqual(batch);
+    expect(splitPdf(batch, "zzz")).toEqual(batch);
+  });
+
+  it("keeps split pages together and in order when sorting by date", () => {
+    next = 0;
+    const batch = splitPdf([pdf("p"), image("old", 1), image("new", 9)], "p", newId);
+    expect(ids(sortByDate(batch))).toEqual(["old", "new1", "new2", "new3", "new"]);
+  });
+});
+
+describe("pageCount with page picks", () => {
+  it("counts the picked pages of a PDF, not all of them", () => {
+    const pdf: BatchImage = { id: "p", name: "p.pdf", bytes: new Uint8Array(), format: "pdf", pages: 5, takenAt: 0, pageIndexes: [4, 0] };
+    expect(pageCount([pdf])).toBe(2);
   });
 });
