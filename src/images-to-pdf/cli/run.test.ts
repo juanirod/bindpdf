@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import type { ImageSource } from "../application/load-image";
 import type { ImageCodec, PresetStore } from "../application/ports";
 import type { Preset } from "../domain/presets";
+import { makePdfFixture } from "../application/pdf-fixture";
 import { sharpCodec } from "../infrastructure/node/sharp-codec";
 import { CancelledError, resolveAdjustments, runCli, type CliDeps, type Session } from "./run";
 
@@ -31,6 +32,13 @@ beforeAll(async () => {
   files.set("noisy.jpg", { name: "noisy.jpg", bytes: new Uint8Array(noisy), lastModified: 0 });
   files.set("rotated.jpg", { name: "rotated.jpg", bytes: new Uint8Array(sideways), lastModified: 0 });
   files.set("notes.txt", { name: "notes.txt", bytes: new Uint8Array([1, 2, 3]), lastModified: 0 });
+  // Created after every image; its file date (0) would sort it first.
+  const contract = await makePdfFixture([[300, 400], [500, 200]], { createdAt: new Date(Date.UTC(2020, 0, 1)) });
+  files.set("contract.pdf", { name: "contract.pdf", bytes: contract, lastModified: 0 });
+  const secret = await makePdfFixture([[100, 100]], { encrypted: true });
+  files.set("secret.pdf", { name: "secret.pdf", bytes: secret, lastModified: 0 });
+  const broken = new TextEncoder().encode("%PDF-1.7\nnot really a pdf");
+  files.set("broken.pdf", { name: "broken.pdf", bytes: new Uint8Array(broken), lastModified: 0 });
 });
 
 const memoryStore = (initial: Preset[] = []): PresetStore & { saved: Preset[] } => {
@@ -341,5 +349,48 @@ describe("resolveAdjustments", () => {
       contrast: 150,
       saturation: 85,
     });
+  });
+});
+
+describe("runCli bind with PDFs", () => {
+  it("adds every page of a PDF in its place and counts real pages", async () => {
+    const { deps, out, err, pageWidths } = setup();
+    expect(await runCli(["a.png", "contract.pdf", "b.jpg"], deps)).toBe(0);
+    expect(await pageWidths()).toEqual([10, 300, 500, 20]);
+    expect(out).toEqual(["Wrote images.pdf (4 pages)."]);
+    expect(err).toEqual([]);
+  });
+
+  it("copies PDF pages as they are, without adjustments, compression or paper size", async () => {
+    const { deps, encoded, pageWidths } = setup();
+    const args = ["contract.pdf", "a.png", "--preset", "scanned-black-white", "--max-size", "100", "--quality", "50", "--page-size", "a4"];
+    expect(await runCli(args, deps)).toBe(0);
+    const [first, second, image] = await pageWidths();
+    expect([first, second]).toEqual([300, 500]);
+    expect(image).toBeCloseTo(595.28);
+    expect(encoded).toHaveLength(1);
+  });
+
+  it("moves a PDF as one block with --order", async () => {
+    const { deps, pageWidths } = setup();
+    expect(await runCli(["contract.pdf", "a.png", "--order", "2,1"], deps)).toBe(0);
+    expect(await pageWidths()).toEqual([10, 300, 500]);
+  });
+
+  it("sorts a PDF by its creation date with --sort date", async () => {
+    const { deps, pageWidths } = setup();
+    expect(await runCli(["a.png", "c.webp", "contract.pdf", "b.jpg", "--sort", "date"], deps)).toBe(0);
+    expect(await pageWidths()).toEqual([20, 30, 10, 300, 500]);
+  });
+
+  it("skips password-protected and damaged PDFs, naming each one", async () => {
+    const { deps, out, err, pageWidths } = setup();
+    expect(await runCli(["secret.pdf", "a.png", "broken.pdf"], deps)).toBe(0);
+    expect(await pageWidths()).toEqual([10]);
+    expect(err).toEqual([
+      "Skipped secret.pdf: it is password-protected.",
+      "Skipped broken.pdf: it could not be read as a PDF.",
+    ]);
+    expect(out).toEqual(["Wrote images.pdf (1 page)."]);
   });
 });

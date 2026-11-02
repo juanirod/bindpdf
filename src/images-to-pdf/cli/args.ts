@@ -39,15 +39,16 @@ export class UsageError extends Error {
   }
 }
 
-export const HELP = `Usage: bindpdf [options] <images...>
+export const HELP = `Usage: bindpdf [options] <files...>
 
 Turn images into one PDF, one page per image, in the order you list them.
+PDFs can be listed too: their pages go in as they are, whatever the adjustments and output options.
 
 Order:
-  -s, --sort date            Sort by when each photo was taken (EXIF, else the file's date)
-      --order <list>         Manual order of the listed images, e.g. 3,1,2
+  -s, --sort date            Sort by when each photo was taken or PDF created, else the file's date
+      --order <list>         Manual order of the listed files, e.g. 3,1,2
 
-Adjustments (applied to every page):
+Adjustments (applied to every image):
   -p, --preset <name>        Start from a preset (see --list-presets)
   -b, --brightness <n>       50 to 150, 100 leaves the image unchanged
   -c, --contrast <n>         50 to 200, 100 leaves the image unchanged
@@ -70,6 +71,7 @@ Other:
 Examples:
   bindpdf *.jpg --sort date --preset scanned-black-white -o book.pdf
   bindpdf cover.png page-*.jpg --brightness 110 --contrast 130
+  bindpdf cover.jpg contract.pdf scans/*.jpg -o all.pdf
   bindpdf *.jpg --max-size 1600 --quality 75 -o smaller.pdf
   bindpdf -i *.jpg
 `;

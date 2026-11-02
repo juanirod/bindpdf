@@ -2,10 +2,10 @@ import type { OutputOptions } from "../application/adjust-image";
 import type { PageSize } from "../application/build-pdf";
 import { estimatePdfSize } from "../application/estimate-size";
 import { makePdf } from "../application/make-pdf";
-import { loadImage, UnsupportedImageError, type ImageSource } from "../application/load-image";
+import { loadImage, UnreadablePdfError, UnsupportedImageError, type ImageSource } from "../application/load-image";
 import type { ImageCodec, PresetStore } from "../application/ports";
 import { NEUTRAL, type Adjustments } from "../domain/adjustments";
-import { sortByDate, type BatchImage } from "../domain/batch";
+import { pageCount, sortByDate, type BatchImage } from "../domain/batch";
 import { BUILT_IN_PRESETS, deletePreset, InvalidPresetNameError, savePreset, type Preset } from "../domain/presets";
 import { HELP, parseCliArgs, UsageError, type BindOptions, type Order } from "./args";
 import { describeAdjustments, findPreset, isBuiltIn, presetSlug } from "./presets";
@@ -96,6 +96,11 @@ const loadBatch = async (files: readonly string[], deps: CliDeps): Promise<Batch
     try {
       batch.push(await loadImage(source, deps.codec));
     } catch (error) {
+      if (error instanceof UnreadablePdfError) {
+        const why = error.reason === "protected" ? "it is password-protected" : "it could not be read as a PDF";
+        deps.err(`Skipped ${source.name}: ${why}.`);
+        continue;
+      }
       if (!(error instanceof UnsupportedImageError)) throw error;
       deps.err(`Skipped ${source.name}: it could not be read as an image.`);
     }
@@ -128,7 +133,7 @@ const bind = async (options: BindOptions, deps: CliDeps) => {
     adjustments = session.adjustments;
   }
 
-  const pages = session.batch.length;
+  const pages = pageCount(session.batch);
   const pdf = await makePdf(
     session.batch,
     { adjustments, compression: session.compression, pageSize: session.pageSize },

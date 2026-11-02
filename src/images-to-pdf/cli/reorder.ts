@@ -10,7 +10,7 @@ import {
   useState,
 } from "@inquirer/core";
 import { styleText } from "node:util";
-import { moveImage, removeImage, sortByDate, type BatchImage } from "../domain/batch";
+import { moveImage, pageCount, removeImage, sortByDate, type BatchImage } from "../domain/batch";
 
 export interface ReorderState {
   readonly pages: readonly BatchImage[];
@@ -75,7 +75,8 @@ export const reorderPrompt = createPrompt<readonly BatchImage[], { message: stri
       if (action) setState(reorder(state, action));
     });
 
-    const count = `${state.pages.length} ${state.pages.length === 1 ? "page" : "pages"}`;
+    const pages = pageCount(state.pages);
+    const count = `${pages} ${pages === 1 ? "page" : "pages"}`;
     if (finished) return `${prefix} ${styleText("bold", config.message)} ${styleText("cyan", count)}`;
 
     const numberWidth = String(state.pages.length).length;
@@ -86,7 +87,8 @@ export const reorderPrompt = createPrompt<readonly BatchImage[], { message: stri
       loop: false,
       renderItem: ({ item, index, isActive }) => {
         const marker = isActive ? (state.grabbed ? "≡" : "❯") : " ";
-        const line = `${marker} ${String(index + 1).padStart(numberWidth)}. ${item.name}  ${styleText("dim", dateFormat.format(item.takenAt))}`;
+        const pdf = item.format === "pdf" ? `PDF, ${item.pages} ${item.pages === 1 ? "page" : "pages"} · ` : "";
+        const line = `${marker} ${String(index + 1).padStart(numberWidth)}. ${item.name}  ${styleText("dim", pdf + dateFormat.format(item.takenAt))}`;
         return isActive ? styleText(state.grabbed ? "yellow" : "cyan", line) : line;
       },
     });
