@@ -4,7 +4,16 @@ import { estimatePdfSize } from "../application/estimate-size";
 import { loadImage, UnreadablePdfError, UnsupportedImageError } from "../application/load-image";
 import { makePdf } from "../application/make-pdf";
 import { NEUTRAL, toCssFilter, type Adjustments } from "../domain/adjustments";
-import { addImages, moveImage, pageCount, removeImage, sortByDate, type BatchImage, type BatchPicture } from "../domain/batch";
+import {
+  addImages,
+  moveImage,
+  pageCount,
+  removeImage,
+  rotateImage,
+  sortByDate,
+  type BatchImage,
+  type BatchPicture,
+} from "../domain/batch";
 import { canvasCodec } from "../infrastructure/browser/canvas-codec";
 import { mountAdjustmentsPanel } from "./adjustments-panel";
 import { pdfLabel, skippedNotice } from "./labels";
@@ -149,6 +158,9 @@ export const mountApp = (doc: Document) => {
 
         const sheet = doc.createElement("div");
         sheet.className = "sheet";
+        const rotation = image.rotation ?? 0;
+        sheet.style.setProperty("--rotation", `${rotation}deg`);
+        sheet.classList.toggle("quarter-turn", rotation % 180 !== 0);
         if (image.format === "pdf") {
           const cover = doc.createElement("div");
           cover.className = "pdf-cover";
@@ -181,10 +193,12 @@ export const mountApp = (doc: Document) => {
         earlier.textContent = "‹";
         const later = pageButton(`Move ${image.name} later`, "later", index === batch.length - 1);
         later.textContent = "›";
+        const rotate = pageButton(`Rotate ${image.name} clockwise`, "rotate");
+        rotate.textContent = "⟳";
         const remove = pageButton(`Remove ${image.name}`, "remove");
         remove.textContent = "×";
         remove.classList.add("remove");
-        tools.append(earlier, later, remove);
+        tools.append(earlier, later, rotate, remove);
 
         meta.append(number, name, tools);
         item.append(sheet, meta);
@@ -271,6 +285,7 @@ export const mountApp = (doc: Document) => {
     if (action === "remove") setBatch(removeImage(batch, id));
     if (action === "earlier") setBatch(moveImage(batch, id, index - 1));
     if (action === "later") setBatch(moveImage(batch, id, index + 1));
+    if (action === "rotate") setBatch(rotateImage(batch, id));
     if (action !== "remove") {
       pages.querySelector<HTMLButtonElement>(`[data-id="${id}"] [data-action="${action}"]:not(:disabled)`)?.focus();
     }

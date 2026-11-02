@@ -212,6 +212,7 @@ body {
 }
 
 .sheet {
+  container-type: size;
   aspect-ratio: 1 / 1.414;
   display: grid;
   place-items: center;
@@ -230,6 +231,18 @@ body {
   object-fit: contain;
   pointer-events: none;
   filter: var(--adjust, none);
+}
+
+/* Turned thumbnails; the PDF itself turns through its page rotation, not the pixels. */
+.sheet img,
+.pdf-cover svg {
+  transform: rotate(var(--rotation, 0deg));
+}
+
+/* A quarter turn swaps width and height, so the image fits the sheet the other way round. */
+.sheet.quarter-turn img {
+  max-width: 100cqh;
+  max-height: 100cqw;
 }
 
 .pdf-cover {
