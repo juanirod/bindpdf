@@ -1,6 +1,7 @@
 import { parseArgs } from "node:util";
 import type { PageSize } from "../application/build-pdf";
 import { ADJUSTMENT_RANGES, type Adjustments } from "../domain/adjustments";
+import type { Rotation } from "../domain/batch";
 
 export type Order =
   | { readonly kind: "given" }
@@ -11,6 +12,8 @@ export type Order =
 export interface BindOptions {
   readonly files: readonly string[];
   readonly order: Order;
+  /** Clockwise turns by 0-based position of the listed files; only present with --rotate. */
+  readonly rotations?: ReadonlyMap<number, Rotation>;
   /** Preset to start from, by name or slug. */
   readonly preset?: string;
   /** Explicit values, applied over the preset. */
@@ -48,6 +51,9 @@ Order:
   -s, --sort date            Sort by when each photo was taken or PDF created, else the file's date
       --order <list>         Manual order of the listed files, e.g. 3,1,2
 
+Rotation:
+      --rotate <list>        Turn listed files clockwise by 90, 180 or 270, e.g. 3:90,5:270
+
 Adjustments (applied to every image):
   -p, --preset <name>        Start from a preset (see --list-presets)
   -b, --brightness <n>       50 to 150, 100 leaves the image unchanged
@@ -72,6 +78,7 @@ Examples:
   bindpdf *.jpg --sort date --preset scanned-black-white -o book.pdf
   bindpdf cover.png page-*.jpg --brightness 110 --contrast 130
   bindpdf cover.jpg contract.pdf scans/*.jpg -o all.pdf
+  bindpdf page-*.jpg --rotate 2:90,4:270
   bindpdf *.jpg --max-size 1600 --quality 75 -o smaller.pdf
   bindpdf -i *.jpg
 `;
@@ -111,6 +118,25 @@ const manualOrder = (raw: string, count: number): Order => {
   return { kind: "manual", positions };
 };
 
+const TURNS: readonly Rotation[] = [90, 180, 270];
+
+const parseRotations = (raw: string, count: number): ReadonlyMap<number, Rotation> => {
+  const rotations = new Map<number, Rotation>();
+  for (const part of raw.split(",")) {
+    const match = /^(\d+):(\d+)$/.exec(part.trim());
+    const position = Number(match?.[1]) - 1;
+    const turn = Number(match?.[2]) as Rotation;
+    if (!match || position < 0 || position >= count || !TURNS.includes(turn)) {
+      throw new UsageError(
+        `--rotate must look like 3:90,5:270: a listed position from 1 to ${count} and a turn of 90, 180 or 270.`,
+      );
+    }
+    if (rotations.has(position)) throw new UsageError(`--rotate lists position ${position + 1} twice.`);
+    rotations.set(position, turn);
+  }
+  return rotations;
+};
+
 export const withPdfExtension = (file: string) => (/\.pdf$/i.test(file) ? file : `${file}.pdf`);
 
 const parse = (argv: readonly string[]) => {
@@ -121,6 +147,7 @@ const parse = (argv: readonly string[]) => {
       options: {
         sort: { type: "string", short: "s" },
         order: { type: "string" },
+        rotate: { type: "string" },
         preset: { type: "string", short: "p" },
         brightness: { type: "string", short: "b" },
         contrast: { type: "string", short: "c" },
@@ -168,6 +195,7 @@ export const parseCliArgs = (argv: readonly string[]): CliCommand => {
     options: {
       files,
       order,
+      ...(values.rotate !== undefined && { rotations: parseRotations(values.rotate, files.length) }),
       ...(values.preset !== undefined && { preset: values.preset }),
       adjustments: {
         ...adjustment("brightness", values.brightness),

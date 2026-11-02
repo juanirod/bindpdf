@@ -41,6 +41,11 @@ describe("parseCliArgs", () => {
     expect(command).toMatchObject({ kind: "bind", options: { quality: 70, maxSize: 2000 } });
   });
 
+  it("reads --rotate as 0-based listed positions with clockwise turns", () => {
+    const command = parseCliArgs(["--rotate", "3:90, 1:270", "a", "b", "c"]);
+    expect(command).toMatchObject({ options: { rotations: new Map([[2, 90], [0, 270]]) } });
+  });
+
   it("reads a manual order as 0-based positions", () => {
     const command = parseCliArgs(["--order", "3, 1,2", "a", "b", "c"]);
     expect(command).toMatchObject({ options: { order: { kind: "manual", positions: [2, 0, 1] } } });
@@ -75,6 +80,12 @@ describe("parseCliArgs", () => {
     [["--quality", "7.5", "a"], "--quality must be a whole number from 1 to 100."],
     [["--max-size", "99", "a"], "--max-size must be a whole number from 100 to 20000."],
     [["--max-size", "big", "a"], "--max-size must be a whole number from 100 to 20000."],
+    [["--rotate", "3:90", "a", "b"], "--rotate must look like 3:90,5:270: a listed position from 1 to 2 and a turn of 90, 180 or 270."],
+    [["--rotate", "0:90", "a", "b"], "--rotate must look like 3:90,5:270: a listed position from 1 to 2 and a turn of 90, 180 or 270."],
+    [["--rotate", "1:45", "a", "b"], "--rotate must look like 3:90,5:270: a listed position from 1 to 2 and a turn of 90, 180 or 270."],
+    [["--rotate", "1:-90", "a", "b"], "--rotate must look like 3:90,5:270: a listed position from 1 to 2 and a turn of 90, 180 or 270."],
+    [["--rotate", "1", "a", "b"], "--rotate must look like 3:90,5:270: a listed position from 1 to 2 and a turn of 90, 180 or 270."],
+    [["--rotate", "1:90,1:180", "a", "b"], "--rotate lists position 1 twice."],
     [["--nope", "a"], "Unknown option '--nope'"],
   ])("rejects %j with a usage error", (argv, message) => {
     expect(() => parseCliArgs(argv)).toThrow(UsageError);

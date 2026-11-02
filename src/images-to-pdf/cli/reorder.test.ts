@@ -49,3 +49,13 @@ describe("reorder", () => {
     expect(sorted).toMatchObject({ cursor: 2, grabbed: false });
   });
 });
+
+describe("reorder rotate", () => {
+  it("turns the page under the cursor a quarter clockwise, keeping order and cursor", () => {
+    const once = reorder(state(1), "rotate");
+    expect(names(once)).toBe("abc");
+    expect(once.cursor).toBe(1);
+    expect(once.pages.map((p) => p.rotation)).toEqual([undefined, 90, undefined]);
+    expect(reorder(reorder(reorder(once, "rotate"), "rotate"), "rotate").pages[1].rotation).toBe(0);
+  });
+});
