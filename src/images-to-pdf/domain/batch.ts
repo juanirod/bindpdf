@@ -1,12 +1,17 @@
 /** Formats pdf-lib can embed natively. Anything else is converted before entering the batch. */
 export type ImageFormat = "png" | "jpg";
 
+/** Clockwise quarter turns, in degrees. */
+export type Rotation = 0 | 90 | 180 | 270;
+
 interface BatchFile {
   readonly id: string;
   readonly name: string;
   readonly bytes: Uint8Array<ArrayBuffer>;
   /** When the photo was taken or the PDF created (ms since epoch), or the file's last-modified time when unknown. */
   readonly takenAt: number;
+  /** Clockwise turn of its pages in the PDF; missing means upright. */
+  readonly rotation?: Rotation;
 }
 
 /** An image, which becomes one page. */
@@ -35,6 +40,10 @@ export const addImages = (
   batch: readonly BatchImage[],
   images: readonly BatchImage[],
 ): BatchImage[] => [...batch, ...images];
+
+/** Turns one item a further 90° clockwise; four turns bring it back upright. */
+export const rotateImage = (batch: readonly BatchImage[], id: string): BatchImage[] =>
+  batch.map((item) => (item.id === id ? { ...item, rotation: (((item.rotation ?? 0) + 90) % 360) as Rotation } : item));
 
 export const removeImage = (batch: readonly BatchImage[], id: string): BatchImage[] =>
   batch.filter((image) => image.id !== id);

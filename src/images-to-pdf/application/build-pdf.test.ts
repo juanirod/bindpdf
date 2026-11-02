@@ -1,5 +1,5 @@
 import { crc32, deflateSync } from "node:zlib";
-import { PDFDocument } from "pdf-lib";
+import { degrees, PDFDocument } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 import type { BatchImage } from "../domain/batch";
 import { buildPdf, createPdfBuilder, EmptyBatchError, fitImage } from "./build-pdf";
@@ -133,5 +133,39 @@ describe("buildPdf with PDFs", () => {
   it("builds a PDF from PDFs alone", async () => {
     const built = await PDFDocument.load(await buildPdf([await pdf("a", [[100, 100]]), await pdf("b", [[200, 100]])]));
     expect(built.getPageCount()).toBe(2);
+  });
+});
+
+describe("buildPdf with rotation", () => {
+  const rotations = async (bytes: Uint8Array) =>
+    (await PDFDocument.load(bytes)).getPages().map((page) => page.getRotation().angle);
+
+  it("rotates an image's page without changing the image or the page size", async () => {
+    const plain = png("wide", 2, 1);
+    const turned = { ...plain, rotation: 90 as const };
+    const built = await PDFDocument.load(await buildPdf([turned, png("other", 1, 1)]));
+    expect(built.getPages().map((page) => page.getRotation().angle)).toEqual([90, 0]);
+    expect(built.getPage(0).getSize()).toEqual({ width: 2, height: 1 });
+  });
+
+  it("turns paper pages together with their image", async () => {
+    const built = await PDFDocument.load(await buildPdf([{ ...png("wide", 2, 1), rotation: 270 }], { pageSize: "a4" }));
+    expect(built.getPage(0).getSize()).toEqual({ width: 841.89, height: 595.28 });
+    expect(built.getPage(0).getRotation().angle).toBe(270);
+  });
+
+  it("rotates every page of a PDF, adding to the rotation each page already has", async () => {
+    const source = await PDFDocument.load(await makePdfFixture([[300, 400], [500, 200]]));
+    source.getPage(1).setRotation(degrees(90));
+    const pdf: BatchImage = {
+      id: "p",
+      name: "p.pdf",
+      bytes: new Uint8Array(await source.save()),
+      format: "pdf",
+      pages: 2,
+      takenAt: 0,
+      rotation: 270,
+    };
+    expect(await rotations(await buildPdf([pdf]))).toEqual([270, 0]);
   });
 });

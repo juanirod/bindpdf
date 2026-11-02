@@ -394,3 +394,43 @@ describe("runCli bind with PDFs", () => {
     expect(out).toEqual(["Wrote images.pdf (1 page)."]);
   });
 });
+
+describe("runCli bind with --rotate", () => {
+  const rotations = async (bytes: Uint8Array) =>
+    (await PDFDocument.load(bytes)).getPages().map((page) => page.getRotation().angle);
+
+  it("turns the files at the listed positions, PDFs with all their pages", async () => {
+    const { deps, out, written, pageWidths } = setup();
+    expect(await runCli(["a.png", "contract.pdf", "b.jpg", "--rotate", "2:90,3:180"], deps)).toBe(0);
+    expect(await rotations(written.get("images.pdf")!)).toEqual([0, 90, 90, 180]);
+    expect(await pageWidths()).toEqual([10, 300, 500, 20]);
+    expect(out).toEqual(["Wrote images.pdf (4 pages)."]);
+  });
+
+  it("keeps each turn with its file when the order changes", async () => {
+    const byOrder = setup();
+    expect(await runCli(["a.png", "b.jpg", "--order", "2,1", "--rotate", "1:270"], byOrder.deps)).toBe(0);
+    expect(await rotations(byOrder.written.get("images.pdf")!)).toEqual([0, 270]);
+
+    const byDate = setup();
+    expect(await runCli(["a.png", "b.jpg", "--sort", "date", "--rotate", "1:90"], byDate.deps)).toBe(0);
+    expect(await byDate.pageWidths()).toEqual([20, 10]);
+    expect(await rotations(byDate.written.get("images.pdf")!)).toEqual([0, 90]);
+  });
+
+  it("doesn't re-encode the turned images", async () => {
+    const { deps, encoded } = setup();
+    expect(await runCli(["a.png", "b.jpg", "--rotate", "1:90,2:180"], deps)).toBe(0);
+    expect(encoded).toEqual([]);
+  });
+
+  it("fails with exit code 2 for a position that wasn't listed", async () => {
+    const { deps, err, written } = setup();
+    expect(await runCli(["a.png", "--rotate", "2:90"], deps)).toBe(2);
+    expect(err).toEqual([
+      "Error: --rotate must look like 3:90,5:270: a listed position from 1 to 1 and a turn of 90, 180 or 270.",
+      "Run bindpdf --help for usage.",
+    ]);
+    expect(written.size).toBe(0);
+  });
+});

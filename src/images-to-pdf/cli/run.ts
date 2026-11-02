@@ -5,9 +5,9 @@ import { makePdf } from "../application/make-pdf";
 import { loadImage, UnreadablePdfError, UnsupportedImageError, type ImageSource } from "../application/load-image";
 import type { ImageCodec, PresetStore } from "../application/ports";
 import { NEUTRAL, type Adjustments } from "../domain/adjustments";
-import { pageCount, sortByDate, type BatchImage } from "../domain/batch";
+import { pageCount, sortByDate, type BatchImage, type Rotation } from "../domain/batch";
 import { BUILT_IN_PRESETS, deletePreset, InvalidPresetNameError, savePreset, type Preset } from "../domain/presets";
-import { HELP, parseCliArgs, UsageError, type BindOptions, type Order } from "./args";
+import { HELP, parseCliArgs, UsageError, type BindOptions } from "./args";
 import { describeAdjustments, findPreset, isBuiltIn, presetSlug } from "./presets";
 import type { Progress } from "./progress";
 import { SMALLER } from "../application/compression";
@@ -82,19 +82,34 @@ const readSource = async (path: string, deps: CliDeps) => {
   }
 };
 
-/** Manual positions refer to the listed files, so they apply before loading, while unreadable files still have a slot. */
-const listedOrder = (files: readonly string[], order: Order) =>
-  order.kind === "manual" ? order.positions.map((position) => files[position]) : files;
+interface Listed {
+  readonly file: string;
+  readonly rotation?: Rotation;
+}
 
-const loadBatch = async (files: readonly string[], deps: CliDeps): Promise<BatchImage[]> => {
+/**
+ * Manual positions and turns refer to the listed files, so they apply before loading, while unreadable files
+ * still have a slot.
+ */
+const listedFiles = (options: BindOptions): Listed[] => {
+  const listed = options.files.map((file, position) => {
+    const rotation = options.rotations?.get(position);
+    return rotation === undefined ? { file } : { file, rotation };
+  });
+  return options.order.kind === "manual" ? options.order.positions.map((position) => listed[position]) : listed;
+};
+
+const loadBatch = async (files: readonly Listed[], deps: CliDeps): Promise<BatchImage[]> => {
   const sources: ImageSource[] = [];
-  for (const file of files) sources.push(await readSource(file, deps));
+  for (const { file } of files) sources.push(await readSource(file, deps));
 
   const batch: BatchImage[] = [];
   for (const [index, source] of sources.entries()) {
     deps.progress?.show(`Reading images ${index + 1}/${sources.length}…`);
     try {
-      batch.push(await loadImage(source, deps.codec));
+      const item = await loadImage(source, deps.codec);
+      const { rotation } = files[index];
+      batch.push(rotation === undefined ? item : { ...item, rotation });
     } catch (error) {
       if (error instanceof UnreadablePdfError) {
         const why = error.reason === "protected" ? "it is password-protected" : "it could not be read as a PDF";
@@ -114,7 +129,7 @@ const bind = async (options: BindOptions, deps: CliDeps) => {
   // Validates the name before doing any work.
   if (options.savePreset !== undefined) savePreset(userPresets, options.savePreset, adjustments);
 
-  const loaded = await loadBatch(listedOrder(options.files, options.order), deps);
+  const loaded = await loadBatch(listedFiles(options), deps);
   let session: Session = {
     batch: options.order.kind === "date" ? sortByDate(loaded) : loaded,
     adjustments,
