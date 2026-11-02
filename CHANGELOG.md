@@ -4,6 +4,8 @@ Notable changes to BindPDF: the web app and the `bindpdf` command line. The form
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-02
+
 ### Added
 
 - Split a PDF into single pages that move, turn and go away like images: the "Split pages" button in the web app and the `e` key in interactive mode. In the CLI, `--pages 2:1-3,7` picks which pages of a listed PDF go in and in what order; list a PDF twice to put other files between its pages.
@@ -54,7 +56,8 @@ First release on npm: `npm install -g bindpdf` or `npx bindpdf`.
 
 - `sharp` upgraded to 0.35.5 to patch libvips and libheif vulnerabilities.
 
-[Unreleased]: https://github.com/juanirod/bindpdf/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/juanirod/bindpdf/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/juanirod/bindpdf/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/juanirod/bindpdf/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/juanirod/bindpdf/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/juanirod/bindpdf/compare/v0.1.0...v0.2.0
