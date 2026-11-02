@@ -9,6 +9,7 @@ Made for photos of book pages and documents: put them in order, give them all th
 | Feature | What it does |
 |---------|--------------|
 | Batch upload | Drop many images at once, or pick them from a file dialog. JPG, PNG, WebP and GIF work. |
+| Existing PDFs | Add PDFs next to the images: each one moves as one block and its pages go in as they are. |
 | Page order | Drag pages to reorder them, or use the arrow buttons (keyboard friendly). |
 | Sort by date | Orders pages by when each photo was taken (EXIF), falling back to the file's date. |
 | Page size | Keep each image's size, or use A4 or Letter pages that turn to match each photo. |

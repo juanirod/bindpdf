@@ -14,21 +14,21 @@
   <body>
     <header class="masthead">
       <h1>BindPDF</h1>
-      <p>Drop a batch of images, put them in order, and download them as one PDF. Nothing leaves your computer.</p>
+      <p>Drop a batch of images and PDFs, put them in order, and download them as one PDF. Nothing leaves your computer.</p>
     </header>
 
     <main>
       <label class="dropzone" id="dropzone">
-        <input id="file-input" type="file" accept="image/*" multiple hidden />
-        <strong>Drop images here</strong>
-        <span>or click to choose files. JPG, PNG, WebP and GIF work.</span>
+        <input id="file-input" type="file" accept="image/*,application/pdf,.pdf" multiple hidden />
+        <strong>Drop images or PDFs here</strong>
+        <span>or click to choose files. JPG, PNG, WebP, GIF and PDF work.</span>
       </label>
 
       <p class="notice" id="notice" role="status" hidden></p>
 
       <section class="adjust" id="adjust" hidden aria-labelledby="adjust-title">
         <h2 id="adjust-title">Adjust images</h2>
-        <p class="hint">Applies to every page, so the whole PDF shares one look.</p>
+        <p class="hint">Applies to every image, so the whole PDF shares one look. PDF pages go in as they are.</p>
 
         <div class="adjust-grid">
           <label class="field">
