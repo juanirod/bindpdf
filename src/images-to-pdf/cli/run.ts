@@ -38,6 +38,8 @@ export interface CliDeps {
   out(line: string): void;
   err(line: string): void;
   readonly version: string;
+  /** Brand mark printed above the help screen; absent prints the help alone. */
+  readonly banner?: string;
   /** Status line for slow steps; absent when output isn't a terminal. */
   readonly progress?: Progress;
   /** Interactive mode; absent when the terminal can't run it. */
@@ -216,7 +218,10 @@ export const runCli = async (argv: readonly string[], deps: CliDeps): Promise<nu
   }
 
   try {
-    if (command.kind === "help") deps.out(HELP);
+    if (command.kind === "help") {
+      if (deps.banner) deps.out(deps.banner);
+      deps.out(deps.banner ? `\n${HELP}` : HELP);
+    }
     if (command.kind === "version") deps.out(deps.version);
     if (command.kind === "list-presets") listPresets(deps);
     if (command.kind === "delete-preset") removePreset(command.name, deps);

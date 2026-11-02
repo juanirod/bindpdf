@@ -29,6 +29,8 @@ To go back to the published version: `npm unlink -g bindpdf && npm install -g bi
 
 The README's [How the code is organized](README.md#how-the-code-is-organized) explains where each part lives.
 
+Brand assets (logo, mark, favicons and the terminal banners) live in `docs/brand/`; [BRAND.md](docs/brand/BRAND.md) explains each file and its colours. The web app and the CLI read them from there, so change them in one place.
+
 ## Pull requests
 
 Before opening a PR, make sure `npm test`, `npm run build` and `npm run build:cli` pass. CI runs them on every pull request, on Node 20, 22 and 24.

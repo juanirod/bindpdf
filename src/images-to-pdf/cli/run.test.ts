@@ -312,6 +312,17 @@ describe("runCli other commands", () => {
     expect(err).toEqual(['Error: Unknown sort "size". Use: date.', "Run bindpdf --help for usage."]);
   });
 
+  it("prints the banner above the help, and only there", async () => {
+    const { deps, out, err } = setup({ banner: "BANNER" });
+    expect(await runCli(["--help"], deps)).toBe(0);
+    expect(out[0]).toBe("BANNER");
+    expect(out[1]).toMatch(/^\nUsage: bindpdf/);
+    expect(await runCli(["-v"], deps)).toBe(0);
+    expect(out.at(-1)).toBe("1.2.3");
+    expect(await runCli(["--sort", "size", "a.png"], deps)).toBe(2);
+    expect(err).toEqual(['Error: Unknown sort "size". Use: date.', "Run bindpdf --help for usage."]);
+  });
+
   it("lists built-in and saved presets", async () => {
     const presets = memoryStore([{ name: "My Look", adjustments: { brightness: 90, contrast: 100, saturation: 50 } }]);
     const { deps, out } = setup({ presets });
