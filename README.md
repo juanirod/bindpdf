@@ -22,19 +22,9 @@ The terminal version (`bindpdf`) does the same, minus image previews. See [Comma
 
 ## Quick start
 
-Requires Node.js 20.17 or later (22.13+ on Node 22).
+Open **[juanirod.github.io/bindpdf](https://juanirod.github.io/bindpdf/)**, drop your photos (and PDFs), put them in order and download the PDF. Nothing is uploaded.
 
-```bash
-npm install
-npm run dev     # open http://localhost:5173
-```
-
-| Command | Purpose |
-|---------|---------|
-| `npm run dev` | Start the dev server |
-| `npm test` | Run the test suite (Vitest) |
-| `npm run build` | Type-check and build the static site into `dist/` |
-| `npm run build:cli` | Type-check and build the command-line app into `dist-cli/` |
+Prefer the terminal? `npx bindpdf *.jpg -o book.pdf`, or see [Command line](#command-line).
 
 ## Command line
 
@@ -48,14 +38,6 @@ Or run it once without installing:
 
 ```bash
 npx bindpdf *.jpg -o book.pdf
-```
-
-To run your local checkout instead, build it and link it:
-
-```bash
-npm install
-npm run build:cli
-npm link
 ```
 
 ```bash
@@ -116,26 +98,9 @@ src/images-to-pdf/
   cli/                      flags, interactive prompts and the bindpdf entry point
 ```
 
-## Deploying
-
-Every push to `main` runs the tests, builds the site and publishes it to GitHub Pages through `.github/workflows/deploy.yml`.
-
-To turn it on in a new repo: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-
-## Releasing the CLI
-
-Pushing a `v*` tag publishes the CLI to npm through `.github/workflows/publish.yml`, using npm trusted publishing (no npm token stored in GitHub). The tag must match the `version` in `package.json`:
-
-```bash
-npm version patch   # bumps package.json, commits and creates the v* tag
-git push --follow-tags
-```
-
-Before tagging, move the `Unreleased` notes in [CHANGELOG.md](CHANGELOG.md) under the new version.
-
 ## Contributing
 
-Issues and pull requests are welcome. Before opening a PR, make sure `npm test`, `npm run build` and `npm run build:cli` pass. CI runs them on every pull request, on Node 20, 22 and 24.
+Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) explains how to run the project locally, the checks a pull request needs, and how the web app and the CLI are released.
 
 ## License
 
