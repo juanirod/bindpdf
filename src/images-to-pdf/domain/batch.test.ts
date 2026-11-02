@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addImages, moveImage, pageCount, removeImage, sortByDate, type BatchImage } from "./batch";
+import { addImages, moveImage, pageCount, removeImage, rotateImage, sortByDate, type BatchImage } from "./batch";
 
 const image = (id: string, takenAt = 0): BatchImage => ({
   id,
@@ -55,5 +55,25 @@ describe("pageCount", () => {
     const pdf: BatchImage = { id: "p", name: "p.pdf", bytes: new Uint8Array(), format: "pdf", pages: 5, takenAt: 0 };
     expect(pageCount([image("a"), pdf, image("b")])).toBe(7);
     expect(pageCount([])).toBe(0);
+  });
+});
+
+describe("rotateImage", () => {
+  it("turns one item a quarter clockwise, back to upright after four turns", () => {
+    let batch = [image("a"), image("b")];
+    const turns: (number | undefined)[] = [];
+    for (let i = 0; i < 4; i++) {
+      batch = rotateImage(batch, "b");
+      turns.push(batch[1].rotation);
+    }
+    expect(turns).toEqual([90, 180, 270, 0]);
+    expect(batch[0].rotation).toBeUndefined();
+  });
+
+  it("ignores unknown ids and never mutates the batch", () => {
+    const batch = [image("a")];
+    expect(rotateImage(batch, "zzz")).toEqual(batch);
+    rotateImage(batch, "a");
+    expect(batch[0].rotation).toBeUndefined();
   });
 });

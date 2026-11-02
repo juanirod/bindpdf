@@ -1,4 +1,4 @@
-import { PageSizes, PDFDocument } from "pdf-lib";
+import { degrees, PageSizes, PDFDocument, type PDFPage } from "pdf-lib";
 import type { BatchImage } from "../domain/batch";
 
 export type PageSize = "image" | "a4" | "letter";
@@ -39,6 +39,14 @@ const pageFor = (image: Size, pageSize: PageSize): Size => {
   return image.width > image.height ? { width: long, height: short } : { width: short, height: long };
 };
 
+/**
+ * Turns the page through the PDF's own rotation, so the image isn't re-encoded and a paper page turns with it.
+ * Adds to any rotation the page already has.
+ */
+const turn = (page: PDFPage, rotation = 0) => {
+  if (rotation !== 0) page.setRotation(degrees((((page.getRotation().angle + rotation) % 360) + 360) % 360));
+};
+
 /** Builds a PDF one file at a time, so each one can be released once it is added. */
 export interface PdfBuilder {
   /** Adds an image as one page, or every page of a PDF as it is. */
@@ -54,7 +62,7 @@ export const createPdfBuilder = async ({ pageSize = "image" }: BuildPdfOptions =
     async addPage(image) {
       if (image.format === "pdf") {
         const source = await PDFDocument.load(image.bytes);
-        for (const page of await pdf.copyPages(source, source.getPageIndices())) pdf.addPage(page);
+        for (const page of await pdf.copyPages(source, source.getPageIndices())) turn(pdf.addPage(page), image.rotation);
         pages += source.getPageCount();
         return;
       }
@@ -63,6 +71,7 @@ export const createPdfBuilder = async ({ pageSize = "image" }: BuildPdfOptions =
       const size = pageFor(embedded, pageSize);
       const page = pdf.addPage([size.width, size.height]);
       page.drawImage(embedded, fitImage(embedded, size));
+      turn(page, image.rotation);
       pages++;
     },
     async save() {
