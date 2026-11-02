@@ -5,6 +5,9 @@ const pages = (count: number) => `${count} ${count === 1 ? "page" : "pages"}`;
 /** Caption of a PDF's card, which shows a PDF logo instead of a preview. */
 export const pdfLabel = (count: number) => `PDF · ${pages(count)}`;
 
+/** Caption of a single page split from a PDF: its file and where it sits in it, e.g. "contract.pdf · 2/5". */
+export const pageLabel = (name: string, index: number, total: number) => `${name} · ${index + 1}/${total}`;
+
 /** File names left out of the batch, by why. */
 export interface Skipped {
   readonly images: readonly string[];

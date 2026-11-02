@@ -6,17 +6,20 @@ import { makePdf } from "../application/make-pdf";
 import { NEUTRAL, toCssFilter, type Adjustments } from "../domain/adjustments";
 import {
   addImages,
+  itemPages,
   moveImage,
   pageCount,
   removeImage,
   rotateImage,
   sortByDate,
+  splitPdf,
   type BatchImage,
+  type BatchPdf,
   type BatchPicture,
 } from "../domain/batch";
 import { canvasCodec } from "../infrastructure/browser/canvas-codec";
 import { mountAdjustmentsPanel } from "./adjustments-panel";
-import { pdfLabel, skippedNotice } from "./labels";
+import { pageLabel, pdfLabel, skippedNotice } from "./labels";
 
 const MIME = { png: "image/png", jpg: "image/jpeg" } as const;
 
@@ -138,6 +141,10 @@ export const mountApp = (doc: Document) => {
     scheduleEstimate();
   };
 
+  /** A whole PDF says how many pages it adds; a single split page says which one it is. */
+  const describePdf = (pdf: BatchPdf) =>
+    pdf.pageIndexes?.length === 1 ? pageLabel(pdf.name, pdf.pageIndexes[0], pdf.pages) : pdfLabel(itemPages(pdf));
+
   const pageButton = (label: string, action: string, disabled = false) => {
     const button = doc.createElement("button");
     button.type = "button";
@@ -166,8 +173,14 @@ export const mountApp = (doc: Document) => {
           cover.className = "pdf-cover";
           cover.innerHTML = PDF_LOGO;
           const label = doc.createElement("span");
-          label.textContent = pdfLabel(image.pages);
+          label.textContent = describePdf(image);
           cover.append(label);
+          if (itemPages(image) > 1) {
+            const split = pageButton(`Split ${image.name} into pages`, "split");
+            split.className = "split";
+            split.textContent = "Split pages";
+            cover.append(split);
+          }
           sheet.append(cover);
         } else {
           const img = doc.createElement("img");
@@ -184,7 +197,7 @@ export const mountApp = (doc: Document) => {
         const name = doc.createElement("span");
         name.className = "name";
         name.textContent = image.name;
-        const detail = image.format === "pdf" ? `${pdfLabel(image.pages)}\n` : "";
+        const detail = image.format === "pdf" ? `${describePdf(image)}\n` : "";
         name.title = `${image.name}\n${detail}${dateFormat.format(image.takenAt)}`;
 
         const tools = doc.createElement("div");
@@ -286,6 +299,7 @@ export const mountApp = (doc: Document) => {
     if (action === "earlier") setBatch(moveImage(batch, id, index - 1));
     if (action === "later") setBatch(moveImage(batch, id, index + 1));
     if (action === "rotate") setBatch(rotateImage(batch, id));
+    if (action === "split") setBatch(splitPdf(batch, id));
     if (action !== "remove") {
       pages.querySelector<HTMLButtonElement>(`[data-id="${id}"] [data-action="${action}"]:not(:disabled)`)?.focus();
     }

@@ -137,3 +137,36 @@ describe("web app", () => {
     expect(pdf.getPages().map((page) => page.getWidth())).toEqual([20, 40]);
   });
 });
+
+describe("web app with split PDFs", () => {
+  const covers = () => cards().map((card) => card.querySelector(".pdf-cover span")?.textContent ?? "image");
+
+  it("splits a PDF card into one card per page, keeping the page count", async () => {
+    await pick([file(wide, "cover.png", "image/png"), file(contract, "contract.pdf", "application/pdf")]);
+    expect(cards()[0].querySelector('[data-action="split"]')).toBeNull();
+
+    button("contract.pdf", "split").click();
+
+    expect(names()).toEqual(["cover.png", "contract.pdf", "contract.pdf"]);
+    expect(covers()).toEqual(["image", "contract.pdf · 1/2", "contract.pdf · 2/2"]);
+    expect(cards().slice(1).every((card) => card.querySelector('[data-action="split"]') === null)).toBe(true);
+    expect($("count").textContent).toBe("3 pages");
+  });
+
+  it("moves, turns and removes split pages, and downloads only what is left", async () => {
+    await pick([file(wide, "cover.png", "image/png"), file(contract, "contract.pdf", "application/pdf")]);
+    button("contract.pdf", "split").click();
+    const page = (n: number) => cards().find((card) => card.querySelector(".pdf-cover span")?.textContent === `contract.pdf · ${n}/2`)!;
+
+    page(2).querySelector<HTMLButtonElement>('[data-action="earlier"]')!.click();
+    page(2).querySelector<HTMLButtonElement>('[data-action="earlier"]')!.click();
+    expect(covers()).toEqual(["contract.pdf · 2/2", "image", "contract.pdf · 1/2"]);
+    page(2).querySelector<HTMLButtonElement>('[data-action="rotate"]')!.click();
+    page(1).querySelector<HTMLButtonElement>('[data-action="remove"]')!.click();
+    expect($("count").textContent).toBe("2 pages");
+
+    const pdf = await download();
+    expect(pdf.getPages().map((p) => p.getWidth())).toEqual([500, 40]);
+    expect(pdf.getPages().map((p) => p.getRotation().angle)).toEqual([90, 0]);
+  });
+});
