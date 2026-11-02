@@ -75,3 +75,12 @@ describe("estimatePdfSize with PDFs", () => {
     await expect(estimatePdfSize([pdf("p", 500)], NEUTRAL, { quality: 50 }, failingCodec)).resolves.toBe(500);
   });
 });
+
+describe("estimatePdfSize with picked PDF pages", () => {
+  it("counts each picked page as its share of the PDF", async () => {
+    const whole: BatchImage = { id: "p", name: "p.pdf", bytes: new Uint8Array(900), format: "pdf", pages: 3, takenAt: 0 };
+    const split = [0, 1, 2].map((page): BatchImage => ({ ...whole, id: `p${page}`, pageIndexes: [page] }));
+    await expect(estimatePdfSize(split, NEUTRAL, {}, failingCodec)).resolves.toBe(900);
+    await expect(estimatePdfSize([{ ...whole, pageIndexes: [0] }], NEUTRAL, { quality: 50 }, failingCodec)).resolves.toBe(300);
+  });
+});

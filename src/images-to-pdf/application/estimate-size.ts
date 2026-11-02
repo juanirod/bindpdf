@@ -1,5 +1,5 @@
 import { isNeutral, type Adjustments } from "../domain/adjustments";
-import type { BatchImage } from "../domain/batch";
+import { itemPages, type BatchImage } from "../domain/batch";
 import { adjustImage, type OutputOptions } from "./adjust-image";
 import type { ImageCodec } from "./ports";
 
@@ -12,8 +12,9 @@ const sampleIndexes = (length: number, count: number) => {
 };
 
 /**
- * Estimates the PDF's size in bytes. PDFs and images that go in as they are add up exactly; otherwise a few
- * images spread over the batch are processed and the rest are assumed to shrink by the same ratio.
+ * Estimates the PDF's size in bytes. PDFs count as the share of their file they add, and images that go in as
+ * they are add up exactly; otherwise a few images spread over the batch are processed and the rest are assumed
+ * to shrink by the same ratio.
  */
 export const estimatePdfSize = async (
   batch: readonly BatchImage[],
@@ -23,7 +24,10 @@ export const estimatePdfSize = async (
 ): Promise<number> => {
   const bytesOf = (items: readonly BatchImage[]) => items.reduce((sum, item) => sum + item.bytes.length, 0);
   const images = batch.filter((item) => item.format !== "pdf");
-  const pdfs = bytesOf(batch) - bytesOf(images);
+  // A PDF item counts as its share of the file, so a split PDF isn't counted once per page.
+  const pdfs = Math.round(
+    batch.reduce((sum, item) => (item.format === "pdf" ? sum + (item.bytes.length * itemPages(item)) / item.pages : sum), 0),
+  );
   const total = bytesOf(images);
   const unchanged = isNeutral(adjustments) && output.maxSize === undefined && output.quality === undefined;
   if (unchanged || images.length === 0) return pdfs + total;

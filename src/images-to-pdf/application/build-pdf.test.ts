@@ -169,3 +169,19 @@ describe("buildPdf with rotation", () => {
     expect(await rotations(await buildPdf([pdf]))).toEqual([270, 0]);
   });
 });
+
+describe("buildPdf with picked PDF pages", () => {
+  it("copies only the picked pages, in the picked order, keeping each one's size", async () => {
+    const pdf: BatchImage = {
+      id: "p",
+      name: "p.pdf",
+      bytes: await makePdfFixture([[100, 100], [200, 100], [300, 100]]),
+      format: "pdf",
+      pages: 3,
+      takenAt: 0,
+      pageIndexes: [2, 0, 2],
+    };
+    const built = await PDFDocument.load(await buildPdf([pdf, png("x", 1, 1)]));
+    expect(built.getPages().map((page) => page.getWidth())).toEqual([300, 100, 300, 1]);
+  });
+});

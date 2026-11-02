@@ -10,7 +10,7 @@ import {
   useState,
 } from "@inquirer/core";
 import { styleText } from "node:util";
-import { moveImage, pageCount, removeImage, rotateImage, sortByDate, type BatchImage } from "../domain/batch";
+import { itemPages, moveImage, pageCount, removeImage, rotateImage, sortByDate, splitPdf, type BatchImage } from "../domain/batch";
 
 export interface ReorderState {
   readonly pages: readonly BatchImage[];
@@ -19,7 +19,7 @@ export interface ReorderState {
   readonly grabbed: boolean;
 }
 
-export type ReorderAction = "up" | "down" | "grab" | "remove" | "sort" | "rotate";
+export type ReorderAction = "up" | "down" | "grab" | "remove" | "sort" | "rotate" | "split";
 
 export const reorder = (state: ReorderState, action: ReorderAction): ReorderState => {
   const { pages, cursor, grabbed } = state;
@@ -27,6 +27,10 @@ export const reorder = (state: ReorderState, action: ReorderAction): ReorderStat
 
   if (action === "grab") return { ...state, grabbed: !grabbed };
   if (action === "rotate") return { ...state, pages: rotateImage(pages, current.id) };
+  if (action === "split") {
+    const next = splitPdf(pages, current.id);
+    return next.length === pages.length ? state : { pages: next, cursor, grabbed: false };
+  }
   if (action === "remove") {
     if (pages.length === 1) return state;
     const next = removeImage(pages, current.id);
@@ -47,7 +51,7 @@ export const reorder = (state: ReorderState, action: ReorderAction): ReorderStat
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
 
-const HELP = "↑↓ move · space grab/drop · r rotate · s sort by date · d remove · enter done";
+const HELP = "↑↓ move · space grab/drop · r rotate · e split PDF · s sort by date · d remove · enter done";
 
 /** Lists the pages and lets the user reorder them with the keyboard. Resolves with the final order. */
 export const reorderPrompt = createPrompt<readonly BatchImage[], { message: string; pages: readonly BatchImage[] }>(
@@ -74,7 +78,9 @@ export const reorderPrompt = createPrompt<readonly BatchImage[], { message: stri
                 ? "sort"
                 : key.name === "r"
                   ? "rotate"
-                  : null;
+                  : key.name === "e"
+                    ? "split"
+                    : null;
       if (action) setState(reorder(state, action));
     });
 
@@ -90,7 +96,12 @@ export const reorderPrompt = createPrompt<readonly BatchImage[], { message: stri
       loop: false,
       renderItem: ({ item, index, isActive }) => {
         const marker = isActive ? (state.grabbed ? "≡" : "❯") : " ";
-        const pdf = item.format === "pdf" ? `PDF, ${item.pages} ${item.pages === 1 ? "page" : "pages"} · ` : "";
+        const pdf =
+          item.format !== "pdf"
+            ? ""
+            : item.pageIndexes?.length === 1
+              ? `PDF, page ${item.pageIndexes[0] + 1}/${item.pages} · `
+              : `PDF, ${itemPages(item)} ${itemPages(item) === 1 ? "page" : "pages"} · `;
         const turn = item.rotation ? `↻ ${item.rotation}°  ` : "";
         const line = `${marker} ${String(index + 1).padStart(numberWidth)}. ${item.name}  ${turn}${styleText("dim", pdf + dateFormat.format(item.takenAt))}`;
         return isActive ? styleText(state.grabbed ? "yellow" : "cyan", line) : line;

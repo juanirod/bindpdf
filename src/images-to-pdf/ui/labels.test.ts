@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { pdfLabel, skippedNotice } from "./labels";
+import { pageLabel, pdfLabel, skippedNotice } from "./labels";
 
 describe("pdfLabel", () => {
   it("names the page count of a PDF card", () => {
     expect(pdfLabel(5)).toBe("PDF · 5 pages");
     expect(pdfLabel(1)).toBe("PDF · 1 page");
+  });
+});
+
+describe("pageLabel", () => {
+  it("names a split page by its file and 1-based place in it", () => {
+    expect(pageLabel("contract.pdf", 1, 5)).toBe("contract.pdf · 2/5");
   });
 });
 
