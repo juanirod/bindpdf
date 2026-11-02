@@ -126,6 +126,8 @@ npm version patch   # bumps package.json, commits and creates the v* tag
 git push --follow-tags
 ```
 
+Before tagging, move the `Unreleased` notes in [CHANGELOG.md](CHANGELOG.md) under the new version.
+
 ## Contributing
 
 Issues and pull requests are welcome. Before opening a PR, make sure `npm test`, `npm run build` and `npm run build:cli` pass. CI runs them on every pull request, on Node 20, 22 and 24.
