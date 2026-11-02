@@ -1,0 +1,8 @@
+      ▄▄▄▄▄▄▄▄▄▄
+   ▄▄▄█▄▄▄▄▄▄  █
+▄▄▄█▄▄▄▄▄   █  █   bindpdf
+█▓▓▓▓▓▓▓█   █  █   photos and PDFs in, one PDF out
+█▓▓▓▓▓▓▓█   █  █   runs locally, nothing is uploaded
+█▓▓▓▓▓▓▓█   █  █
+▀▀▀█▀▀▀▀▀   █▀▀▀
+   ▀▀▀▀▀▀▀▀▀▀

@@ -54,11 +54,29 @@ body {
 }
 
 .masthead h1 {
+  display: flex;
+  align-items: center;
+  gap: 0.15em;
   margin: 0;
   font-size: var(--step-4);
   font-weight: 800;
   line-height: 0.9;
   letter-spacing: -0.04em;
+}
+
+/* Pixel art: whole-number sizes of its 24×24 grid keep every pixel sharp. */
+.masthead .mark {
+  display: block;
+  width: 72px;
+  height: 72px;
+  image-rendering: pixelated;
+}
+
+@media (max-width: 30rem) {
+  .masthead .mark {
+    width: 48px;
+    height: 48px;
+  }
 }
 
 .masthead p {

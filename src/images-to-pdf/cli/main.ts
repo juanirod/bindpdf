@@ -3,6 +3,7 @@ import { version } from "../../../package.json";
 import { createFilePresetStore } from "../infrastructure/node/file-preset-store";
 import { readImageFile } from "../infrastructure/node/read-image-file";
 import { sharpCodec } from "../infrastructure/node/sharp-codec";
+import { chooseBanner } from "./banner";
 import { interact } from "./interactive";
 import { createLineProgress } from "./progress";
 import { runCli } from "./run";
@@ -24,6 +25,7 @@ process.exitCode = await runCli(process.argv.slice(2), {
     console.error(line);
   },
   version,
+  banner: chooseBanner({ isTTY: Boolean(process.stdout.isTTY), env: process.env, platform: process.platform }),
   ...(progress && { progress }),
   ...(process.stdin.isTTY && process.stdout.isTTY && { interact }),
 });

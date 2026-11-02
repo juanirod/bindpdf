@@ -4,6 +4,10 @@ Notable changes to BindPDF: the web app and the `bindpdf` command line. The form
 
 ## [Unreleased]
 
+### Added
+
+- New pixel-art identity: a stack of sheets held by a yellow binder clip. It's in the README, the web app's title and favicon, and above `bindpdf --help` (in colour on terminals that support it, plain text otherwise, and without colour when `NO_COLOR` is set).
+
 ## [0.3.0] - 2026-11-01
 
 ### Added

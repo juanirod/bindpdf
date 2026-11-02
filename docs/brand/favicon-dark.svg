@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="32" height="32" shape-rendering="crispEdges">
+  <title>BindPDF</title>
+  <!-- 16x16 cut of the mark, dark version: two sheets, no text lines, thicker clip -->
+  <g id="sheet-back">
+    <rect x="6" y="0" width="10" height="13" fill="#c9d0db"/>
+    <rect x="7" y="1" width="8" height="11" fill="#5a6478"/>
+  </g>
+  <g id="sheet-front">
+    <rect x="3" y="3" width="10" height="13" fill="#c9d0db"/>
+    <rect x="4" y="4" width="8" height="11" fill="#232a38"/>
+  </g>
+  <g id="clip">
+    <g fill="#1b2230">
+      <rect x="1" y="6" width="1" height="7"/>
+      <rect x="2" y="5" width="7" height="9"/>
+    </g>
+    <rect x="2" y="6" width="6" height="7" fill="#f2c230"/>
+    <g id="clip-shine" fill="#ffffff">
+      <rect x="2" y="6" width="2" height="1"/>
+      <rect x="2" y="7" width="1" height="1"/>
+    </g>
+    <rect id="clip-handle" x="0" y="7" width="1" height="5" fill="#e7ebf2"/>
+  </g>
+</svg>

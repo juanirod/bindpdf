@@ -1,4 +1,9 @@
-# BindPDF
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/bindpdf-logo-dark.svg">
+    <img alt="BindPDF" src="docs/brand/bindpdf-logo.svg" width="372" height="96">
+  </picture>
+</h1>
 
 Turn a batch of photos into one PDF, right in your browser or from the terminal. Nothing is uploaded: every image is processed on your own computer.
 
