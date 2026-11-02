@@ -4,6 +4,8 @@ Notable changes to BindPDF: the web app and the `bindpdf` command line. The form
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-01
+
 ### Added
 
 - Turn single images or whole PDFs clockwise by 90, 180 or 270 degrees: `--rotate 2:90,4:270` in the CLI, the `r` key in interactive mode, and a ⟳ button on each card in the web app. Pages turn through the PDF's own page rotation, so photos aren't re-encoded and keep their quality and size; a PDF's pages add the turn to the rotation they already have.
@@ -42,6 +44,7 @@ First release on npm: `npm install -g bindpdf` or `npx bindpdf`.
 
 - `sharp` upgraded to 0.35.5 to patch libvips and libheif vulnerabilities.
 
-[Unreleased]: https://github.com/juanirod/bindpdf/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/juanirod/bindpdf/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/juanirod/bindpdf/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/juanirod/bindpdf/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/juanirod/bindpdf/releases/tag/v0.1.0
