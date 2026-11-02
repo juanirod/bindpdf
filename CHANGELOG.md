@@ -4,6 +4,8 @@ Notable changes to BindPDF: the web app and the `bindpdf` command line. The form
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-02
+
 ### Added
 
 - New pixel-art identity: a stack of sheets held by a yellow binder clip. It's in the README, the web app's title and favicon, and above `bindpdf --help` (in colour on terminals that support it, plain text otherwise, and without colour when `NO_COLOR` is set).
@@ -48,7 +50,8 @@ First release on npm: `npm install -g bindpdf` or `npx bindpdf`.
 
 - `sharp` upgraded to 0.35.5 to patch libvips and libheif vulnerabilities.
 
-[Unreleased]: https://github.com/juanirod/bindpdf/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/juanirod/bindpdf/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/juanirod/bindpdf/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/juanirod/bindpdf/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/juanirod/bindpdf/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/juanirod/bindpdf/releases/tag/v0.1.0
